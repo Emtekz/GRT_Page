@@ -274,7 +274,7 @@ function openModal(offer) {
 
   const descriptionEl = document.getElementById("modal-description");
   descriptionEl.innerHTML = offer.contentWarning
-    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text">Content Warning: ${escapeHtml(offer.contentWarning)}</span>`
+    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>Content Warning:</strong><br>${escapeHtml(offer.contentWarning)}</span>`
     : escapeHtml(offer.description);
 
   const gmEl = document.getElementById("modal-gm");
