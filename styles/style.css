@@ -679,6 +679,52 @@ main {
   margin-top: 0;
 }
 
+/* Content Warning als <details> - zeigt im Ruhezustand nur eine schmale
+   Klapp-Zeile (kostet also fast keinen Platz), die Beschreibung darunter
+   bleibt dadurch immer gleich groß und das Pop-up wächst nicht mit. */
+.content-warning {
+  margin: 0.6rem 0 0;
+}
+
+.content-warning summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(224, 122, 58, 0.14);
+  border: 1px solid rgba(224, 122, 58, 0.45);
+  color: #e88a4e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.content-warning summary::-webkit-details-marker {
+  display: none;
+}
+
+.content-warning summary::before {
+  content: "⚠";
+}
+
+.content-warning[open] summary {
+  border-radius: 10px 10px 0 0;
+}
+
+.content-warning p {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(224, 122, 58, 0.45);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: rgba(224, 122, 58, 0.07);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .modal-section-label {
   margin: 0.75rem 0 0.3rem;
   padding-top: 0.75rem;

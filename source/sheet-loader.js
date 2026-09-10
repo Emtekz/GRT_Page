@@ -205,7 +205,8 @@ function rowToOffer(row, index, range) {
     playerNames,
     startTime,
     endTime,
-    description: row["Abenteuerbeschreibung"] || ""
+    description: row["Abenteuerbeschreibung"] || "",
+    contentWarning: isBlankPlaceholder(row["Content Warnings"] || "") ? "" : (row["Content Warnings"] || "").trim()
   };
 }
 

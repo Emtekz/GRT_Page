@@ -409,6 +409,15 @@ function openModal(offer, range) {
     fillBarWrapper.innerHTML = "";
   }
 
+  const contentWarningEl = document.getElementById("modal-content-warning");
+  if (offer.contentWarning) {
+    document.getElementById("modal-content-warning-text").textContent = offer.contentWarning;
+    contentWarningEl.classList.remove("hidden");
+    contentWarningEl.open = false;
+  } else {
+    contentWarningEl.classList.add("hidden");
+  }
+
   const descriptionEl = document.getElementById("modal-description");
   descriptionEl.textContent = offer.description;
 
