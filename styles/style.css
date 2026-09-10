@@ -1,0 +1,726 @@
+:root {
+  --bg: #16141f;
+  --bg-alt: #1e1b2a;
+  --card-bg: #262238;
+  --card-hover: #322c47;
+  --accent: #d4a24e;
+  --accent-2: #7c5cff;
+  --text: #f1eef7;
+  --text-dim: #b3aec2;
+  --border: #3a3450;
+  --shadow: rgba(0, 0, 0, 0.45);
+  font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  /* Fallback-Hintergrund: body wird bei offenem Pop-up per position:fixed aus
+     dem Fluss genommen, wodurch html seine Höhe verlieren kann - ohne diesen
+     Hintergrund würde dabei kurz das weiße Standard-Weiß durchscheinen. */
+  background: var(--bg);
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #221f30 0%, var(--bg) 60%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Bei offenem Pop-up (openModal()/closeModal() in script.js/timeline.js)
+   wird die Seite per position:fixed eingefroren, statt overflow:hidden zu
+   setzen - so bleibt die reservierte Scrollbar-Breite unverändert und der
+   Seiteninhalt springt beim Öffnen/Schließen nicht zur Seite. */
+body.modal-open {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+/* Grid statt Flex, damit die Sprungpillen unabhängig von der Breite des
+   Wechsel-Piktogramms wirklich mittig stehen: äußere Spalten sind gleich
+   breit (1fr/1fr), die mittlere Spalte fasst nur die Pillen selbst. */
+.slot-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: rgba(22, 20, 31, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Zeigt Name + Zeitspanne der Session, die gerade oben im Viewport zu sehen
+   ist (siehe setupNavCurrentSection() in script.js) - ersetzt die früheren
+   Sprunglinks zu Nachmittag/Pause/Abend. Linksbündig und in derselben Größe
+   wie die echte Überschrift in der Section (.slot-heading h2 + .slot-time).
+   Liegt per position:absolute über der ganzen Navbar (statt in deren Grid) und
+   bekommt dieselbe max-width/margin/padding wie <main>, damit der Text exakt
+   denselben Abstand zum linken Rand hat wie die echten Section-Überschriften -
+   und dadurch auch auf schmalen Bildschirmen die volle Breite (statt nur der
+   engen Grid-Spalte neben dem Wechsel-Piktogramm) zur Verfügung hat, ohne
+   abgeschnitten zu werden. Nimmt außerdem nicht mehr an der Navbar-Höhe teil
+   (die richtet sich jetzt nur noch nach dem Piktogramm-Button). */
+.slot-nav-current-frame {
+  position: absolute;
+  inset: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.slot-nav-current {
+  width: 100%;
+  text-align: left;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-nav-current .slot-nav-current-time {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-left: 0.5rem;
+}
+
+/* Großes Piktogramm zum Wechseln zwischen Kachel- und Zeitstrahl-Ansicht -
+   liegt in derselben Leiste wie die Sprungnavigation, statt im Header. */
+.slot-nav-view-toggle {
+  grid-column: 3;
+  justify-self: end;
+  /* Muss über der absolut positionierten .nav-time-ruler-Kopie liegen (siehe
+     timeline.css), sonst würde die zuletzt gemalt und den Button optisch
+     verdecken, obwohl sie dank pointer-events:none nicht anklickbar ist. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.slot-nav-view-toggle:hover,
+.slot-nav-view-toggle:focus-visible {
+  color: var(--text);
+  border-color: var(--accent-2);
+  background: var(--card-hover);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.slot-nav-view-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.slot-nav-view-label {
+  white-space: nowrap;
+}
+
+/* Auf schmalen Bildschirmen nur das Piktogramm zeigen, den Text ausblenden */
+@media (max-width: 700px) {
+  .slot-nav-view-label {
+    display: none;
+  }
+
+  .slot-nav-view-toggle {
+    padding: 0 0.85rem;
+  }
+}
+
+/* Verdeckt die komplette Seite (inkl. Header/Navbar), solange loadOffers()
+   noch lädt - so sieht niemand, wie Überschrift/Datum/Kacheln erst noch
+   befüllt werden. Wird per JS (script.js/timeline.js) entfernt, sobald
+   renderDashboard()/renderTimeline() fertig sind. */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-size: 1rem;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+header.event-header {
+  text-align: center;
+  padding: 2.5rem 1rem 2rem;
+  background: linear-gradient(180deg, #2a2440 0%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Ein Grid mit zwei gleich breiten "Platzhalter"-Spalten links/rechts der
+   Überschrift (1fr ... 1fr) statt fester Breakpoints: das Logo sitzt in der
+   linken Spalte, direkt neben der (mittleren, immer echt zentrierten) Spalte
+   mit der Überschrift. Weil beide äußeren Spalten dieselbe fr-Größe haben,
+   bleibt die Überschrift bei JEDER Bildschirmbreite exakt mittig, ganz ohne
+   Gefahr, dass Logo und Text sich bei bestimmten Zwischenbreiten überlappen
+   (das war das Problem bei der vorherigen position:absolute-Lösung).
+   Schriftgröße + Logogröße skalieren dazu stufenlos per clamp()+vw mit der
+   Bildschirmbreite mit, statt zwischen zwei festen Werten hin- und
+   herzuspringen (dadurch wirkte der Text auf mittleren Breiten arg klein). */
+.event-header-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+header.event-header .event-logo {
+  display: block;
+  grid-column: 1;
+  justify-self: end;
+  max-height: clamp(48px, 24px + 6vw, 120px);
+  width: auto;
+}
+
+header.event-header h1 {
+  grid-column: 2;
+  margin: 0;
+  min-width: 0;
+  font-size: clamp(1.6rem, 1.1rem + 2.3vw, 2.9rem);
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  text-shadow: 0 2px 8px var(--shadow);
+}
+
+header.event-header .event-datetime {
+  margin: 1.2rem 0 0;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+}
+
+header.event-header .event-datetime strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  header.event-header {
+    padding: 1.5rem 1rem 1.2rem;
+  }
+
+  header.event-header .event-datetime {
+    margin-top: 0.7rem;
+    font-size: 0.95rem;
+  }
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.slot-section {
+  margin-bottom: 3rem;
+  scroll-margin-top: 4.5rem;
+}
+
+.slot-section--empty {
+  padding-bottom: 1.2rem;
+}
+
+.slot-section--empty .slot-heading {
+  margin-bottom: 0;
+}
+
+.offer-card--pause {
+  grid-column: 1 / -1;
+}
+
+.slot-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.6rem;
+}
+
+.slot-heading h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--text);
+}
+
+.slot-heading .slot-time {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Karten-Layout: Titelbild/Farbverlauf füllt die ganze Karte, Text liegt darüber
+   (mit dunklem Verlauf von unten für Lesbarkeit), statt Bild oben + Text darunter. */
+.offer-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  min-height: 220px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.offer-card:hover,
+.offer-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px var(--shadow);
+  background: var(--card-hover);
+  outline: none;
+}
+
+.offer-card .offer-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.offer-card .offer-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.offer-card .offer-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(10, 8, 16, 0.92) 15%,
+    rgba(10, 8, 16, 0.55) 50%,
+    rgba(10, 8, 16, 0.05) 85%
+  );
+}
+
+.offer-card .offer-body {
+  position: relative;
+  z-index: 2;
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+.offer-card .offer-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.3rem;
+}
+
+.offer-card .offer-system {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offer-card .offer-language {
+  height: 14px;
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.offer-card .offer-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.offer-card .offer-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.offer-card .offer-footer span {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Auslastungsanzeige (Füllstand der Spielerplätze) */
+/* Ein Segment pro Platz statt einem durchgehenden Balken - so sieht man auf
+   einen Blick sowohl die grobe Auslastung (Ampelfarbe) als auch die genaue
+   Anzahl freier/belegter Plätze. */
+.fill-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  margin-top: 0.5rem;
+}
+
+.fill-segment {
+  flex: 1;
+  min-width: 2px;
+  height: 100%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Ampelfarben je nach Auslastung */
+.fill-segment.filled.fill-low {
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+}
+
+.fill-segment.filled.fill-mid {
+  background: linear-gradient(90deg, #f4d03f, #f39c12);
+}
+
+.fill-segment.filled.fill-full {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+.hidden {
+  display: none;
+}
+
+/* Auf schmalen Bildschirmen 2 Karten pro Reihe statt nur einer - Schrift/
+   Innenabstand etwas kompakter, damit es bei der geringeren Kartenbreite
+   noch gut lesbar bleibt. */
+@media (max-width: 700px) {
+  .offer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .offer-card {
+    min-height: 170px;
+  }
+
+  .offer-card .offer-body {
+    padding: 0.6rem 0.7rem 0.8rem;
+  }
+
+  .offer-card .offer-system {
+    font-size: 0.65rem;
+  }
+
+  .offer-card .offer-title {
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .offer-card .offer-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    font-size: 0.68rem;
+  }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 100;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  max-width: 560px;
+  width: 100%;
+  height: min(640px, 90vh);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bild geht fließend in den Pop-Up-Hintergrund über (Verlauf via ::after) -
+   System/Titel liegen als Overlay direkt auf dem Bild, damit im Content-
+   Bereich darunter Platz für die Beschreibung frei bleibt. */
+.modal #modal-image-slot {
+  position: relative;
+  flex-shrink: 0;
+  height: 230px;
+}
+
+#modal-image-inner {
+  position: absolute;
+  inset: 0;
+}
+
+.modal #modal-image-slot::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70%;
+  background: linear-gradient(180deg, transparent, var(--bg-alt) 95%);
+  pointer-events: none;
+}
+
+.modal .modal-image,
+.modal .modal-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 14px 14px 0 0;
+}
+
+.modal .modal-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.modal-image-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 1.6rem 0.9rem;
+  z-index: 1;
+}
+
+.modal-image-overlay .modal-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.15rem;
+}
+
+.modal-image-overlay .modal-system {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.5rem;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
+.modal-image-overlay .modal-language {
+  height: 18px;
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+.modal-image-overlay .modal-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.8rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-content {
+  padding: 0.7rem 1.6rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Alles außer der Beschreibung soll nie schrumpfen (Flex-Kinder dürfen das
+   sonst standardmäßig) - dadurch bleiben Bild, Stats, Auslastungsbalken etc.
+   bei jedem Angebot gleich groß, egal wie viel Text/Spieler dazukommen. */
+.modal-content > * {
+  flex-shrink: 0;
+}
+
+.modal-stats {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.modal-stats .stat {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.modal-stats .stat strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.modal-stats .stat span {
+  color: var(--text-dim);
+}
+
+.modal-content #modal-fill-bar {
+  margin-top: 0;
+}
+
+.modal-section-label {
+  margin: 0.75rem 0 0.3rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.modal-description {
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-line;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-anchor: none;
+  padding-right: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.modal-description::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-description::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-description::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.modal-description::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-2);
+}
+
+.modal-gm {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}

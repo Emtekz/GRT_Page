@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rollenspieltag - Zeitstrahl (Test)</title>
+  <link rel="stylesheet" href="../styles/style.css?v=56">
+  <link rel="stylesheet" href="../styles/timeline.css?v=56">
+</head>
+<body>
+
+  <!-- Verdeckt die ganze Seite, bis die Daten (Header-Infos + Angebote) geladen
+       sind - damit niemand die Seite noch leer/unbefüllt zu sehen bekommt.
+       Wird von timeline.js entfernt, sobald renderTimeline() fertig ist. -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p>Zeitplan wird geladen …</p>
+  </div>
+
+  <header class="event-header">
+    <div class="event-header-top">
+      <img class="event-logo" src="../Images/Default/gc_logo.png" alt="Logo des Veranstalters">
+      <h1 id="event-title"> </h1>
+    </div>
+    <p class="event-datetime">Am <strong id="event-date"></strong> im <strong id="event-location"></strong></p>
+  </header>
+
+  <nav class="slot-nav" id="slot-nav">
+    <div class="nav-time-ruler" id="nav-time-ruler">
+      <div class="nav-time-ruler-frame">
+        <div class="nav-slot-heading" id="nav-slot-heading"></div>
+        <div class="nav-slot-hint" id="nav-slot-hint"></div>
+        <div class="nav-time-ruler-track" id="nav-time-ruler-track"></div>
+      </div>
+    </div>
+    <a class="slot-nav-view-toggle" href="../index.html" aria-label="Zurück zur Kachel-Ansicht" title="Zurück zur Kachel-Ansicht">
+      <svg class="slot-nav-view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+      </svg>
+      <span class="slot-nav-view-label">Dashboard</span>
+    </a>
+  </nav>
+
+  <main>
+    <div id="timeline-container"></div>
+  </main>
+
+  <!-- Pop-up mit Abenteuer-Details -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-system">
+      <button class="modal-close" id="modal-close" aria-label="Schließen">&times;</button>
+      <div id="modal-image-slot">
+        <div id="modal-image-inner"></div>
+        <div class="modal-image-overlay">
+          <div class="modal-header-row">
+            <h2 class="modal-system" id="modal-system"></h2>
+            <img class="modal-language hidden" id="modal-language" alt="Englisch">
+          </div>
+          <p class="modal-title" id="modal-title"></p>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="modal-stats">
+          <div class="stat" id="modal-time"></div>
+          <div class="stat" id="modal-players"></div>
+        </div>
+        <div class="fill-bar hidden" id="modal-fill-bar"></div>
+        <p class="modal-section-label">Beschreibung:</p>
+        <p class="modal-description" id="modal-description"></p>
+        <p class="modal-gm" id="modal-gm"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diese Seite liegt in pages/, daher zeigen alle Bild-Pfade in image-resolver.js
+       eine Ebene zu hoch - ASSET_BASE gleicht das aus. -->
+  <script>const ASSET_BASE = "../";</script>
+  <script src="../source/data.js?v=56"></script>
+  <script src="../csv-link.js"></script>
+  <script src="../source/sheet-loader.js?v=56"></script>
+  <script src="../source/image-resolver.js?v=56"></script>
+  <script src="../source/timeline.js?v=56"></script>
+</body>
+</html>

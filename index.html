@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rollenspieltag - Zeitplan</title>
+  <link rel="stylesheet" href="styles/style.css?v=56">
+  <link rel="stylesheet" href="styles/timeline.css?v=56">
+</head>
+<body>
+
+  <!-- Verdeckt die ganze Seite, bis die Daten (Header-Infos + Angebote) geladen
+       sind - damit niemand die Seite noch leer/unbefüllt zu sehen bekommt.
+       Wird von script.js entfernt, sobald renderDashboard() fertig ist. -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p>Dashboard wird geladen …</p>
+  </div>
+
+  <header class="event-header">
+    <div class="event-header-top">
+      <img class="event-logo" src="Images/Default/gc_logo.png" alt="Logo des Veranstalters">
+      <h1 id="event-title"> </h1>
+    </div>
+    <p class="event-datetime">Am <strong id="event-date"></strong> im <strong id="event-location"></strong></p>
+  </header>
+
+  <nav class="slot-nav" id="slot-nav">
+    <div class="slot-nav-current-frame">
+      <div class="slot-nav-current" id="slot-nav-current"></div>
+    </div>
+    <a class="slot-nav-view-toggle" href="pages/timeline.html" aria-label="Zeitstrahl-Ansicht (Test)" title="Zeitstrahl-Ansicht (Test)">
+      <svg class="slot-nav-view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <span class="slot-nav-view-label">Zeitplan</span>
+    </a>
+  </nav>
+
+  <main>
+    <div id="slots-container"></div>
+  </main>
+
+  <!-- Pop-up mit Abenteuer-Details -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-system">
+      <button class="modal-close" id="modal-close" aria-label="Schließen">&times;</button>
+      <div id="modal-image-slot">
+        <div id="modal-image-inner"></div>
+        <div class="modal-image-overlay">
+          <div class="modal-header-row">
+            <h2 class="modal-system" id="modal-system"></h2>
+            <img class="modal-language hidden" id="modal-language" alt="Englisch">
+          </div>
+          <p class="modal-title" id="modal-title"></p>
+        </div>
+      </div>
+      <div class="modal-content">
+        <div class="modal-stats">
+          <div class="stat" id="modal-time"></div>
+          <div class="stat" id="modal-players"></div>
+        </div>
+        <div class="fill-bar hidden" id="modal-fill-bar"></div>
+        <p class="modal-section-label">Beschreibung:</p>
+        <p class="modal-description" id="modal-description"></p>
+        <p class="modal-gm" id="modal-gm"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="source/data.js?v=56"></script>
+  <script src="csv-link.js"></script>
+  <script src="source/sheet-loader.js?v=56"></script>
+  <script src="source/image-resolver.js?v=56"></script>
+  <script src="source/script.js?v=56"></script>
+</body>
+</html>
