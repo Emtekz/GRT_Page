@@ -1,3 +1,5 @@
+/* Alte Palette (vor der Anpassung ans gc_logo) - zum Zurückwechseln einfach
+   diesen Block wieder einkommentieren und den darunter auskommentieren:
 :root {
   --bg: #16141f;
   --bg-alt: #1e1b2a;
@@ -9,6 +11,24 @@
   --text-dim: #b3aec2;
   --border: #3a3450;
   --shadow: rgba(0, 0, 0, 0.45);
+  font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
+}
+*/
+
+/* Neue Palette, abgeleitet aus den Logo-Farben (gc_logo.png): tiefes
+   Dice-Navy/-Blau als Hintergrund, das helle Himmel-Cyan aus "GAMES" als
+   Hauptakzent, das Magenta aus "Cafe" als zweiter Akzent. */
+:root {
+  --bg: #0d0b22;
+  --bg-alt: #161233;
+  --card-bg: #1f1a42;
+  --card-hover: #2a2350;
+  --accent: #4fd1f0;
+  --accent-2: #c026d3;
+  --text: #f1eef7;
+  --text-dim: #a9a3c9;
+  --border: #352f5c;
+  --shadow: rgba(0, 0, 0, 0.5);
   font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
 }
 
