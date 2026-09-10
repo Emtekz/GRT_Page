@@ -11,6 +11,15 @@ const MOBILE_QUERY = "(max-width: 700px)";
 
 let OFFERS = [];
 
+// Escaped Text für die Verwendung in innerHTML (u.a. für die rot markierte
+// Content Warning am Ende von modal-description).
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // Auslastung: nur relevant, wenn currentPlayers bekannt ist (z.B. aus dem Google Sheet)
 function hasFillInfo(offer) {
   return offer.currentPlayers !== undefined && offer.currentPlayers !== null && offer.maxPlayers > 0;
@@ -413,9 +422,9 @@ function openModal(offer, range) {
   contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
 
   const descriptionEl = document.getElementById("modal-description");
-  descriptionEl.textContent = offer.contentWarning
-    ? `${offer.description}\n\nContent Warning: ${offer.contentWarning}`
-    : offer.description;
+  descriptionEl.innerHTML = offer.contentWarning
+    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text">Content Warning: ${escapeHtml(offer.contentWarning)}</span>`
+    : escapeHtml(offer.description);
 
   const gmEl = document.getElementById("modal-gm");
   if (offer.gm) {

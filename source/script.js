@@ -8,6 +8,15 @@ function getSlotById(slotId) {
   return SLOTS.find((s) => s.id === slotId);
 }
 
+// Escaped Text für die Verwendung in innerHTML (u.a. für die rot markierte
+// Content Warning am Ende von modal-description).
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function formatTimeRange(offer) {
   const slot = getSlotById(offer.slotId);
   const start = offer.startTime || (slot ? slot.start : "?");
@@ -264,9 +273,9 @@ function openModal(offer) {
   contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
 
   const descriptionEl = document.getElementById("modal-description");
-  descriptionEl.textContent = offer.contentWarning
-    ? `${offer.description}\n\nContent Warning: ${offer.contentWarning}`
-    : offer.description;
+  descriptionEl.innerHTML = offer.contentWarning
+    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text">Content Warning: ${escapeHtml(offer.contentWarning)}</span>`
+    : escapeHtml(offer.description);
 
   const gmEl = document.getElementById("modal-gm");
   if (offer.gm) {

@@ -712,6 +712,14 @@ main {
   display: none;
 }
 
+.content-warning-text {
+  color: #ff6b6b;
+  background: rgba(220, 38, 38, 0.15);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
 .modal-description {
   line-height: 1.55;
   color: var(--text);
