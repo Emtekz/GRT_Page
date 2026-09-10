@@ -261,12 +261,14 @@ function openModal(offer) {
   }
 
   const contentWarningEl = document.getElementById("modal-content-warning");
+  const contentWarningFlagEl = document.getElementById("modal-content-warning-flag");
   if (offer.contentWarning) {
     document.getElementById("modal-content-warning-text").textContent = offer.contentWarning;
     contentWarningEl.classList.remove("hidden");
-    contentWarningEl.open = false;
+    contentWarningFlagEl.classList.remove("hidden");
   } else {
     contentWarningEl.classList.add("hidden");
+    contentWarningFlagEl.classList.add("hidden");
   }
 
   const descriptionEl = document.getElementById("modal-description");

@@ -679,52 +679,6 @@ main {
   margin-top: 0;
 }
 
-/* Content Warning als <details> - zeigt im Ruhezustand nur eine schmale
-   Klapp-Zeile (kostet also fast keinen Platz), die Beschreibung darunter
-   bleibt dadurch immer gleich groß und das Pop-up wächst nicht mit. */
-.content-warning {
-  margin: 0.6rem 0 0;
-}
-
-.content-warning summary {
-  cursor: pointer;
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(224, 122, 58, 0.14);
-  border: 1px solid rgba(224, 122, 58, 0.45);
-  color: #e88a4e;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.content-warning summary::-webkit-details-marker {
-  display: none;
-}
-
-.content-warning summary::before {
-  content: "⚠";
-}
-
-.content-warning[open] summary {
-  border-radius: 10px 10px 0 0;
-}
-
-.content-warning p {
-  margin: 0;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid rgba(224, 122, 58, 0.45);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  background: rgba(224, 122, 58, 0.07);
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
 .modal-section-label {
   margin: 0.75rem 0 0.3rem;
   padding-top: 0.75rem;
@@ -733,6 +687,61 @@ main {
   font-size: 1.05rem;
   font-weight: 500;
   line-height: 1;
+}
+
+/* Kleine Markierung neben "Beschreibung:", wenn es zum Angebot eine Content
+   Warning gibt - der eigentliche Text steht kompakt UNTER der Beschreibung
+   (siehe .modal-content-warning), damit die Beschreibung selbst nicht durch
+   ein aufklappbares Element eingeengt wird (war am Handy zu wenig Platz). */
+.content-warning-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(224, 122, 58, 0.14);
+  border: 1px solid rgba(224, 122, 58, 0.45);
+  color: #e88a4e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+/* max-height + eigener Scroll, damit eine sehr lange Content Warning nicht
+   unbegrenzt Platz von der Beschreibung wegnehmen kann - das Pop-up hat eine
+   feste Höhe, der Platz für beide Texte muss also gedeckelt sein. */
+.modal-content-warning {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(224, 122, 58, 0.45);
+  border-radius: 8px;
+  background: rgba(224, 122, 58, 0.07);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  max-height: 4.6em;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(224, 122, 58, 0.5) transparent;
+}
+
+.modal-content-warning::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content-warning::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content-warning::-webkit-scrollbar-thumb {
+  background: rgba(224, 122, 58, 0.5);
+  border-radius: 999px;
+}
+
+.modal-content-warning strong {
+  color: #e88a4e;
 }
 
 .modal-description {
