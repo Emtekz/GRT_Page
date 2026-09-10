@@ -1,23 +1,5 @@
-/* Alte Palette (vor der Anpassung ans gc_logo) - zum Zurückwechseln einfach
-   diesen Block wieder einkommentieren und den darunter auskommentieren:
-:root {
-  --bg: #16141f;
-  --bg-alt: #1e1b2a;
-  --card-bg: #262238;
-  --card-hover: #322c47;
-  --accent: #d4a24e;
-  --accent-2: #7c5cff;
-  --text: #f1eef7;
-  --text-dim: #b3aec2;
-  --border: #3a3450;
-  --shadow: rgba(0, 0, 0, 0.45);
-  font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
-}
-*/
-
-/* Neue Palette, abgeleitet aus den Logo-Farben (gc_logo.png): tiefes
-   Dice-Navy/-Blau als Hintergrund, das helle Himmel-Cyan aus "GAMES" als
-   Hauptakzent, das Magenta aus "Cafe" als zweiter Akzent. */
+/* Logo-Matching-Palette (Navy/Cyan/Magenta) - kam nicht gut an, siehe unten
+   den Kontrast-Versuch. Zum Zurückwechseln einfach wieder einkommentieren:
 :root {
   --bg: #0d0b22;
   --bg-alt: #161233;
@@ -29,6 +11,26 @@
   --text-dim: #a9a3c9;
   --border: #352f5c;
   --shadow: rgba(0, 0, 0, 0.5);
+  font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
+}
+*/
+
+/* Kontrast-Palette: warmes Gold/Orange auf dunklem, neutralem Hintergrund -
+   setzt sich bewusst vom kühlen Blau/Magenta des gc_logo ab, statt es zu
+   spiegeln, damit das Logo dagegen "poppt". Entspricht größtenteils der
+   ursprünglichen Palette, nur --accent-2 ist jetzt wärmer (Orange statt
+   Blau-Violett) für mehr Kontrast. */
+:root {
+  --bg: #16141f;
+  --bg-alt: #1e1b2a;
+  --card-bg: #262238;
+  --card-hover: #322c47;
+  --accent: #d4a24e;
+  --accent-2: #e2622f;
+  --text: #f1eef7;
+  --text-dim: #b3aec2;
+  --border: #3a3450;
+  --shadow: rgba(0, 0, 0, 0.45);
   font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
 }
 
