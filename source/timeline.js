@@ -307,16 +307,6 @@ function renderTimelineBySlot(container, range, offersWithRange) {
 
   container.appendChild(scroller);
 
-  // Springt beim Slot-Wechsel (Wischen) zurück an den oberen Rand der neuen
-  // Section - sonst bleibt die Seite auf dem vertikalen Scroll-Stand vom
-  // vorherigen Slot stehen und man landet z.B. nach dem Wischen von einem
-  // weit heruntergescrollten "Nachmittag" mitten in der viel kürzeren "Pause"
-  // auf leerer, grauer Fläche statt oben bei deren Inhalt. Erst NACH dem
-  // Absetzen des Snap-Scrolls (debounced), damit es nicht mitten im Wischen
-  // ruckelt.
-  let lastSlotIndex = 0;
-  let verticalResetTimer;
-
   // EXPERIMENT: Navbar-Kopie der Stunden-Skala auch auf Mobile - zeigt das
   // Lineal des Zeitraums, zu dem gerade hingeswipt wurde, und aktualisiert
   // sich beim Swipen. Dank Scroll-Snap ist "welcher Zeitraum ist gerade
@@ -344,20 +334,6 @@ function renderTimelineBySlot(container, range, offersWithRange) {
     if (hintEl) {
       hintEl.textContent = slotEntries.length > 1 ? "Wischen für weitere Sessions" : "";
     }
-
-    clearTimeout(verticalResetTimer);
-    verticalResetTimer = setTimeout(() => {
-      if (clamped !== lastSlotIndex) {
-        lastSlotIndex = clamped;
-        // scrollIntoView allein reicht nicht - die sticky Navbar liegt optisch
-        // ÜBER dem Seitenanfang und würde den oberen Rand der Section
-        // verdecken, ohne dass die Navbar selbst das beim Scrollen berücksichtigt.
-        // Deshalb manuell um die Navbar-Höhe versetzt scrollen.
-        const navHeight = document.getElementById("slot-nav")?.offsetHeight || 0;
-        const targetY = sections[clamped].getBoundingClientRect().top + window.scrollY - navHeight;
-        window.scrollTo({ top: targetY, behavior: "instant" });
-      }
-    }, 120);
   }
   scroller.addEventListener("scroll", updateNavRuler, { passive: true });
   updateNavRuler();
