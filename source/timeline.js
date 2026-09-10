@@ -349,7 +349,13 @@ function renderTimelineBySlot(container, range, offersWithRange) {
     verticalResetTimer = setTimeout(() => {
       if (clamped !== lastSlotIndex) {
         lastSlotIndex = clamped;
-        sections[clamped].scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+        // scrollIntoView allein reicht nicht - die sticky Navbar liegt optisch
+        // ÜBER dem Seitenanfang und würde den oberen Rand der Section
+        // verdecken, ohne dass die Navbar selbst das beim Scrollen berücksichtigt.
+        // Deshalb manuell um die Navbar-Höhe versetzt scrollen.
+        const navHeight = document.getElementById("slot-nav")?.offsetHeight || 0;
+        const targetY = sections[clamped].getBoundingClientRect().top + window.scrollY - navHeight;
+        window.scrollTo({ top: targetY, behavior: "instant" });
       }
     }, 120);
   }
