@@ -699,9 +699,9 @@ main {
   margin-left: 0.4rem;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  background: rgba(224, 122, 58, 0.14);
-  border: 1px solid rgba(224, 122, 58, 0.45);
-  color: #e88a4e;
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  color: #ff9494;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
