@@ -260,19 +260,13 @@ function openModal(offer) {
     fillBarWrapper.innerHTML = "";
   }
 
-  const contentWarningEl = document.getElementById("modal-content-warning");
   const contentWarningFlagEl = document.getElementById("modal-content-warning-flag");
-  if (offer.contentWarning) {
-    document.getElementById("modal-content-warning-text").textContent = offer.contentWarning;
-    contentWarningEl.classList.remove("hidden");
-    contentWarningFlagEl.classList.remove("hidden");
-  } else {
-    contentWarningEl.classList.add("hidden");
-    contentWarningFlagEl.classList.add("hidden");
-  }
+  contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
 
   const descriptionEl = document.getElementById("modal-description");
-  descriptionEl.textContent = offer.description;
+  descriptionEl.textContent = offer.contentWarning
+    ? `${offer.description}\n\nContent Warning: ${offer.contentWarning}`
+    : offer.description;
 
   const gmEl = document.getElementById("modal-gm");
   if (offer.gm) {

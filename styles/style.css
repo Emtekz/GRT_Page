@@ -690,9 +690,8 @@ main {
 }
 
 /* Kleine Markierung neben "Beschreibung:", wenn es zum Angebot eine Content
-   Warning gibt - der eigentliche Text steht kompakt UNTER der Beschreibung
-   (siehe .modal-content-warning), damit die Beschreibung selbst nicht durch
-   ein aufklappbares Element eingeengt wird (war am Handy zu wenig Platz). */
+   Warning gibt - der Text selbst steht mit in der Beschreibung (siehe
+   descriptionEl in openModal()), keine eigene Box/kein eigenes Element mehr. */
 .content-warning-flag {
   display: inline-flex;
   align-items: center;
@@ -709,39 +708,8 @@ main {
   vertical-align: middle;
 }
 
-/* max-height + eigener Scroll, damit eine sehr lange Content Warning nicht
-   unbegrenzt Platz von der Beschreibung wegnehmen kann - das Pop-up hat eine
-   feste Höhe, der Platz für beide Texte muss also gedeckelt sein. */
-.modal-content-warning {
-  margin: 0.75rem 0 0;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid rgba(224, 122, 58, 0.45);
-  border-radius: 8px;
-  background: rgba(224, 122, 58, 0.07);
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  line-height: 1.4;
-  max-height: 4.6em;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(224, 122, 58, 0.5) transparent;
-}
-
-.modal-content-warning::-webkit-scrollbar {
-  width: 6px;
-}
-
-.modal-content-warning::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.modal-content-warning::-webkit-scrollbar-thumb {
-  background: rgba(224, 122, 58, 0.5);
-  border-radius: 999px;
-}
-
-.modal-content-warning strong {
-  color: #e88a4e;
+.content-warning-flag.hidden {
+  display: none;
 }
 
 .modal-description {
