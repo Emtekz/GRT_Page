@@ -392,6 +392,8 @@ function openModal(offer, range) {
   const imageOptions = slot && slot.isBreak ? { defaultOnly: true } : undefined;
   imageSlot.innerHTML = buildImageMarkup(offer, "modal-image", "modal-placeholder", imageOptions);
 
+  const t = getUiText(offer.language);
+
   document.getElementById("modal-system").textContent = offer.system;
   document.getElementById("modal-title").textContent = offer.title;
 
@@ -404,10 +406,10 @@ function openModal(offer, range) {
   }
 
   document.getElementById("modal-time").innerHTML =
-    `<strong>${formatMinutesAsTime(range.startMin)} - ${formatMinutesAsTime(range.endMin)} Uhr</strong><span>Uhrzeit</span>`;
+    `<strong>${formatMinutesAsTime(range.startMin)} - ${formatMinutesAsTime(range.endMin)}${t.timeSuffix}</strong><span>${t.time}</span>`;
   document.getElementById("modal-players").innerHTML = hasFillInfo(offer)
-    ? `<strong>${offer.currentPlayers} / ${offer.maxPlayers}</strong><span>Reservierungen</span>`
-    : `<strong>${offer.maxPlayers}</strong><span>max. Spieler</span>`;
+    ? `<strong>${offer.currentPlayers} / ${offer.maxPlayers}</strong><span>${t.reservations}</span>`
+    : `<strong>${offer.maxPlayers}</strong><span>${t.maxPlayers}</span>`;
 
   const fillBarWrapper = document.getElementById("modal-fill-bar");
   if (hasFillInfo(offer)) {
@@ -418,17 +420,21 @@ function openModal(offer, range) {
     fillBarWrapper.innerHTML = "";
   }
 
+  document.getElementById("modal-description-label").textContent = t.description;
+
   const contentWarningFlagEl = document.getElementById("modal-content-warning-flag");
   contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
+  contentWarningFlagEl.textContent = t.contentWarningFlag;
+  contentWarningFlagEl.title = t.contentWarningFlagTitle;
 
   const descriptionEl = document.getElementById("modal-description");
   descriptionEl.innerHTML = offer.contentWarning
-    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>Content Warning:</strong><br>${escapeHtml(offer.contentWarning)}</span>`
+    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>${t.contentWarningLabel}</strong><br>${escapeHtml(offer.contentWarning)}</span>`
     : escapeHtml(offer.description);
 
   const gmEl = document.getElementById("modal-gm");
   if (offer.gm) {
-    gmEl.textContent = `Spielleitung: ${offer.gm}`;
+    gmEl.textContent = `${t.gm} ${offer.gm}`;
     gmEl.classList.remove("hidden");
   } else {
     gmEl.classList.add("hidden");

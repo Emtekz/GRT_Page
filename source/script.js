@@ -17,11 +17,11 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
-function formatTimeRange(offer) {
+function formatTimeRange(offer, timeSuffix) {
   const slot = getSlotById(offer.slotId);
   const start = offer.startTime || (slot ? slot.start : "?");
   const end = offer.endTime || (slot ? slot.end : "?");
-  return `${start} - ${end} Uhr`;
+  return `${start} - ${end}${timeSuffix}`;
 }
 
 // Auslastung: nur relevant, wenn currentPlayers bekannt ist (z.B. aus dem Google Sheet)
@@ -86,7 +86,7 @@ function buildOfferCard(offer, options) {
       </div>
       <h3 class="offer-title">${offer.title}</h3>
       <div class="offer-footer">
-        <span>${formatTimeRange(offer)}</span>
+        <span>${formatTimeRange(offer, " Uhr")}</span>
         <span>${playerCountText(offer)}</span>
       </div>
       ${buildFillBarMarkup(offer)}
@@ -244,6 +244,8 @@ function openModal(offer) {
   const imageOptions = slot && slot.isBreak ? { defaultOnly: true } : undefined;
   imageSlot.innerHTML = buildImageMarkup(offer, "modal-image", "modal-placeholder", imageOptions);
 
+  const t = getUiText(offer.language);
+
   document.getElementById("modal-system").textContent = offer.system;
   document.getElementById("modal-title").textContent = offer.title;
 
@@ -255,10 +257,10 @@ function openModal(offer) {
     modalLanguageEl.classList.add("hidden");
   }
 
-  document.getElementById("modal-time").innerHTML = `<strong>${formatTimeRange(offer)}</strong><span>Uhrzeit</span>`;
+  document.getElementById("modal-time").innerHTML = `<strong>${formatTimeRange(offer, t.timeSuffix)}</strong><span>${t.time}</span>`;
   document.getElementById("modal-players").innerHTML = hasFillInfo(offer)
-    ? `<strong>${offer.currentPlayers} / ${offer.maxPlayers}</strong><span>Reservierungen</span>`
-    : `<strong>${offer.maxPlayers}</strong><span>max. Spieler</span>`;
+    ? `<strong>${offer.currentPlayers} / ${offer.maxPlayers}</strong><span>${t.reservations}</span>`
+    : `<strong>${offer.maxPlayers}</strong><span>${t.maxPlayers}</span>`;
 
   const fillBarWrapper = document.getElementById("modal-fill-bar");
   if (hasFillInfo(offer)) {
@@ -269,17 +271,21 @@ function openModal(offer) {
     fillBarWrapper.innerHTML = "";
   }
 
+  document.getElementById("modal-description-label").textContent = t.description;
+
   const contentWarningFlagEl = document.getElementById("modal-content-warning-flag");
   contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
+  contentWarningFlagEl.textContent = t.contentWarningFlag;
+  contentWarningFlagEl.title = t.contentWarningFlagTitle;
 
   const descriptionEl = document.getElementById("modal-description");
   descriptionEl.innerHTML = offer.contentWarning
-    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>Content Warning:</strong><br>${escapeHtml(offer.contentWarning)}</span>`
+    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>${t.contentWarningLabel}</strong><br>${escapeHtml(offer.contentWarning)}</span>`
     : escapeHtml(offer.description);
 
   const gmEl = document.getElementById("modal-gm");
   if (offer.gm) {
-    gmEl.textContent = `Spielleitung: ${offer.gm}`;
+    gmEl.textContent = `${t.gm} ${offer.gm}`;
     gmEl.classList.remove("hidden");
   } else {
     gmEl.classList.add("hidden");

@@ -80,6 +80,39 @@ function normalizeLanguage(value) {
   return value.trim().toUpperCase();
 }
 
+// Feste UI-Texte im Pop-up (script.js/timeline.js), abhängig von offer.language.
+// Die Freitexte (Beschreibung, Content Warning) kommen ja schon in der Sprache
+// aus dem Sheet, wie sie eingetragen wurden - hier geht es nur um die festen
+// Labels drumherum ("Uhrzeit", "Beschreibung:" etc.).
+const UI_TEXT = {
+  DE: {
+    timeSuffix: " Uhr",
+    time: "Uhrzeit",
+    reservations: "Reservierungen",
+    maxPlayers: "max. Spieler",
+    description: "Beschreibung:",
+    contentWarningFlag: "⚠ CW - unter der Beschreibung",
+    contentWarningFlagTitle: "Enthält eine Content Warning, siehe unten",
+    contentWarningLabel: "Content Warning:",
+    gm: "Spielleitung:"
+  },
+  ENG: {
+    timeSuffix: "",
+    time: "Time",
+    reservations: "Reservations",
+    maxPlayers: "max. players",
+    description: "Description:",
+    contentWarningFlag: "⚠ CW - below description",
+    contentWarningFlagTitle: "Contains a content warning, see below",
+    contentWarningLabel: "Content Warning:",
+    gm: "Game Master:"
+  }
+};
+
+function getUiText(language) {
+  return UI_TEXT[language] || UI_TEXT.DE;
+}
+
 // Liest "Label:" / Wert-Paare aus dem Kopfbereich des Sheets (Zeilen vor der Tabelle).
 function parseMetaBlock(metaRows) {
   const meta = {};
