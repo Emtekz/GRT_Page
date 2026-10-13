@@ -1,32 +1,39 @@
 /*
   ============================================================
-  DATEN FÜR DEN ROLLENSPIELTAG-ZEITPLAN
+  data.js - Grunddaten des Rollenspieltags
   ============================================================
-  Hier trägst du alle Infos zum Event ein. Die Seite (index.html)
-  liest diese Datei aus und baut daraus automatisch das Dashboard.
+  Die Seiten bauen sich aus diesen Daten auf. Das meiste wird beim Laden vom
+  Google Sheet überschrieben (siehe sheet-loader.js); die Werte hier gelten nur,
+  solange das Sheet nichts anderes liefert oder nicht erreichbar ist.
 
-  1) EVENT_INFO      -> allgemeine Infos zum Event (Titel, Datum, Ort)
-  2) SLOTS           -> die festen Zeitslots des Tages
-  3) EXTRA_OFFERS    -> Angebote, die NICHT aus dem Sheet kommen
-                         (z.B. die Pause), werden immer zusätzlich angezeigt
-  4) FALLBACK_OFFERS -> Beispiel-/Test-Angebote, die nur verwendet werden,
-                         wenn das Sheet nicht erreichbar ist
+  1) EVENT_INFO      Titel, Datum und Ort (Sheet-Kopfbereich überschreibt sie)
+  2) SLOTS           die festen Zeitslots des Tages
+  3) EXTRA_OFFERS    Angebote, die nicht aus der Haupttabelle kommen (die Pause);
+                     Titel, Plätze, Leitung und Sprache stammen aus der
+                     "Pausenangebot"-Zeile im Sheet
+  4) FALLBACK_OFFERS Beispiel-Angebote, die nur erscheinen, wenn das Sheet nicht
+                     erreichbar ist
 
-  Der Link zur Google-Sheets-Tabelle steht in der eigenen Datei csv-link.js,
-  damit er auch ohne Code-Kenntnisse leicht zu finden und zu ändern ist.
+  Der Link zum Sheet steht in csv-link.js.
 
-  Ein Slot kann mit isBreak: true als Pause markiert werden. Er wird
-  dann optisch abgehoben dargestellt, kann aber trotzdem ganz normal
-  Angebote enthalten.
+  Ein Slot mit isBreak: true wird als Pause dargestellt (eigener Abschnitt, Bilder
+  nur aus Images/Default/), kann aber ganz normal Angebote enthalten.
 
-  Angebots-Felder (Sheet-Spalten bzw. EXTRA_OFFERS/FALLBACK_OFFERS):
-    system            - Name des Rollenspielsystems
-    title             - Name des Abenteuers
-    startTime/endTime - Uhrzeit im Format "13:00" (bestimmt automatisch den Slot)
-    maxPlayers        - maximale Spieleranzahl
-    currentPlayers    - aktuell angemeldete Spieler (optional, für Auslastungsanzeige)
-    description       - Kurzbeschreibung des Abenteuers (für das Pop-up)
-    gm                - Name des Spielleiters (optional, im Sheet aktuell nicht enthalten)
+  Felder eines Angebots (Sheet-Spalten bzw. EXTRA_OFFERS/FALLBACK_OFFERS):
+    id, slotId        interne Kennung / Zuordnung zu einem Slot (id aus SLOTS)
+    system            Name des Rollenspielsystems
+    title             Name des Abenteuers (leer = Angebot wird nicht angezeigt)
+    language          "DE" oder "ENG" (optional; ENG zeigt die Flagge und
+                      übersetzt die festen Pop-up-Texte)
+    startTime/endTime Uhrzeit "13:00" (bestimmt den Slot; fehlt sie, gilt die des Slots)
+    maxPlayers        maximale Spieleranzahl
+    currentPlayers    angemeldete Spieler (optional, für die Auslastungsanzeige)
+    description       Beschreibung für das Pop-up
+    contentWarning    Content Warning für das Pop-up (optional)
+    gm                Name der Spielleitung für das Pop-up (optional; aus dem Sheet
+                      wird er bewusst nicht angezeigt)
+    image             fester Bildpfad (optional, sonst wird das Bild über den
+                      Namen gesucht - siehe image-resolver.js)
 */
 
 const EVENT_INFO = {
@@ -35,16 +42,16 @@ const EVENT_INFO = {
   location: "Vereinsheim, Hauptstraße 1"
 };
 
-// Feste Zeitslots des Tages
+// Feste Zeitslots des Tages (Reihenfolge = Reihenfolge auf der Seite).
+// Die Pause wird beim Laden aus dem Sheet angepasst.
 const SLOTS = [
   { id: "slot1", label: "Nachmittag", start: "13:00", end: "18:00" },
-  { id: "pause", label: "Pause",               start: "18:00", end: "19:00", isBreak: true },
-  { id: "slot2", label: "Abend",      start: "19:00", end: "00:00" }
+  { id: "pause", label: "Pause", start: "18:00", end: "19:00", isBreak: true },
+  { id: "slot2", label: "Abend", start: "19:00", end: "00:00" }
 ];
 
-// Angebote, die zusätzlich zum Sheet angezeigt werden (z.B. die Pause).
-// Der Titel wird aus "Pausenangebot:" im Sheet befüllt - bleibt er dort leer,
-// wird dieses Angebot automatisch ausgeblendet (siehe sheet-loader.js).
+// Angebote außerhalb der Haupttabelle. Das Pausenangebot wird aus der Zeile
+// "Pausenangebot" im Sheet befüllt; bleibt der Titel leer, wird es ausgeblendet.
 const EXTRA_OFFERS = [
   {
     id: "extra-pause",

@@ -1,6 +1,6 @@
 /*
   ============================================================
-  HIER DEN LINK ZUR GOOGLE-SHEETS-TABELLE EINTRAGEN
+  csv-link.js - Link zur Google-Sheets-Tabelle
   ============================================================
   So bekommst du den Link:
     1. Google Sheet öffnen
@@ -11,6 +11,7 @@
 
   Diesen Link unten zwischen die Anführungszeichen "" einfügen und
   Speichern - fertig, sonst muss an dieser Datei nichts verändert werden.
+  (Der Link ist öffentlich lesbar - das ist bei "Im Web veröffentlichen" so gewollt.)
 */
 
 const SHEET_CSV_URL =

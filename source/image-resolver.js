@@ -1,52 +1,57 @@
-// Löst Titelbilder für Angebote auf und wird von script.js UND timeline.js genutzt.
-//
-// Reihenfolge der Bildsuche für ein Angebot:
-//   1. offer.image (falls in data.js/Sheet manuell gesetzt) - hat immer Vorrang
-//   2. Images/<Name des Abenteuers>.<jpg|jpeg|png|webp>          (abenteuerspezifisches Bild)
-//   3. Images/Default/<System>.<jpg|jpeg|png|webp>               (allgemeines System-Bild)
-//   4. automatischer Farbverlauf-Platzhalter mit Systemnamen
-//
-// Mit buildImageMarkup(offer, imgClass, placeholderClass, { defaultOnly: true })
-// wird NUR in Images/Default/ gesucht (nicht in Images/) - erst nach dem Namen
-// des Angebots, dann nach dem System. Genutzt fürs Pausenangebot, das kein
-// eigenes Bild im Haupt-Ordner haben soll.
-//
-// Der Dateiname muss dabei dem Text aus "Name des Abenteuers" bzw. "System"
-// entsprechen, aber komplett klein geschrieben sein - Leerzeichen werden zu
-// Unterstrichen, Klammern/Sonderzeichen entfernt, "&" wird zu "and".
-// Beispiel: System "Daggerheart" -> Images/Default/daggerheart.webp
-// Beispiel: System "Cthulhu (Now)" -> Images/Default/cthulhu_now.webp
-// Beispiel: System "Eldershard (D&D 5e)" -> Images/Default/eldershard_dandd_5e.webp
-//
-// Seiten außerhalb des Projekt-Hauptordners (z.B. pages/timeline.html) müssen VOR
-// dieser Datei ein globales ASSET_BASE setzen (z.B. "../"), damit die Bild-Pfade
-// trotzdem auf den echten Images-Ordner im Hauptordner zeigen.
+/*
+  ============================================================
+  image-resolver.js - Titelbilder für die Angebote finden
+  ============================================================
+  Wird von allen Seiten genutzt (Kacheln, Zeitstrahl, Pop-up, Experimente).
+
+  Suchreihenfolge für ein Angebot (der erste Treffer gewinnt):
+    1. offer.image                    - falls im Angebot fest eingetragen
+    2. Images/<Abenteuername>.<ext>   - Bild nur für dieses Abenteuer
+    3. Images/Default/<System>.<ext>  - allgemeines Bild des Systems
+    4. Images/Default/<System ohne Edition>.<ext>
+                                      - z.B. "Dungeons & Dragons 5e" findet auch
+                                        dungeons_and_dragons.webp
+    5. Platzhalter: Farbverlauf (aus dem Systemnamen) mit dem Logo
+  Als Endung wird webp, jpg, jpeg und png probiert.
+
+  Dateinamen: komplett klein, Leerzeichen -> "_", Sonderzeichen entfallen, "&" -> "and"
+    "Daggerheart"         -> Images/Default/daggerheart.webp
+    "Cthulhu (Now)"       -> Images/Default/cthulhu_now.webp
+    "Eldershard (D&D 5e)" -> Images/Default/eldershard_dandd_5e.webp
+  Neue Bilder gehören nach Images-Originale/ (siehe optimize-images.ps1), nicht
+  direkt nach Images/.
+
+  Mit buildImageMarkup(..., { defaultOnly: true }) wird auch das Abenteuer-Bild nur
+  in Images/Default/ gesucht (das Pausenangebot soll kein eigenes Bild bekommen).
+
+  Seiten außerhalb des Hauptordners (z.B. pages/timeline.html) müssen VOR dieser
+  Datei die Variable ASSET_BASE setzen (z.B. "../"), damit die Bildpfade stimmen.
+*/
 
 const ASSET_PREFIX = typeof ASSET_BASE !== "undefined" ? ASSET_BASE : "";
 const IMAGE_FOLDER = `${ASSET_PREFIX}Images`;
 const DEFAULT_IMAGE_FOLDER = `${ASSET_PREFIX}Images/Default`;
 const IMAGE_EXTENSIONS = ["webp", "jpg", "jpeg", "png"];
 
-function hashColor(str) {
+// Stabiler Farbverlauf aus einem Text: gleicher Systemname = immer gleiche Farbe
+function hashColor(text) {
   let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue1 = Math.abs(hash) % 360;
   const hue2 = (hue1 + 40) % 360;
   return `linear-gradient(135deg, hsl(${hue1}, 55%, 32%), hsl(${hue2}, 55%, 18%))`;
 }
 
-function escapeAttr(str) {
-  return String(str || "").replace(/"/g, "&quot;");
+// Macht einen Text sicher für die Verwendung in einem HTML-Attribut
+function escapeAttr(text) {
+  return String(text || "").replace(/"/g, "&quot;");
 }
 
-// Macht aus einem Abenteuer-/Systemnamen einen dateisystem-/URL-tauglichen Namen.
-// Es bleiben nur Buchstaben/Zahlen übrig (Klammern, Doppelpunkte, Sonderzeichen
-// etc. werden komplett entfernt statt einzeln aufgezählt), alles wird klein
-// geschrieben. "&" wird vorher zu "and", damit "D&D" und "D and D" auf
-// denselben Dateinamen führen. Bilddateien müssen daher komplett klein
-// geschrieben sein (z.B. "Cthulhu (Now)" -> Images/Default/cthulhu_now.jpg).
+// Macht aus einem Abenteuer-/Systemnamen den Dateinamen-Teil: nur Buchstaben und
+// Zahlen bleiben (Klammern, Doppelpunkte etc. entfallen), alles klein, "&" wird
+// vorher zu "and" ("D&D" und "D and D" führen so zum selben Namen).
 function slugifyForImage(text) {
   return String(text || "")
     .trim()
@@ -56,75 +61,68 @@ function slugifyForImage(text) {
     .replace(/\s+/g, "_");
 }
 
-// options.defaultOnly: true -> überspringt die abenteuerspezifische Suche in
-// Images/ und sucht nur in Images/Default/<System> (z.B. fürs Pausenangebot,
-// dessen Titel sich jede Woche ändert und daher kein eigenes Bild braucht).
+// Alle Dateipfade eines Namens in einem Ordner, einer je Endung
+function pathsWithExtensions(folder, slug) {
+  return IMAGE_EXTENSIONS.map((ext) => `${folder}/${encodeURIComponent(slug)}.${ext}`);
+}
+
+// Alle Bildpfade, die für ein Angebot in Frage kommen, in Suchreihenfolge.
 function buildImageCandidates(offer, options) {
-  const opts = options || {};
-  const candidates = [];
+  const titleFolder = options && options.defaultOnly ? DEFAULT_IMAGE_FOLDER : IMAGE_FOLDER;
   const titleSlug = slugifyForImage(offer.title);
   const systemSlug = slugifyForImage(offer.system);
-  const titleFolder = opts.defaultOnly ? DEFAULT_IMAGE_FOLDER : IMAGE_FOLDER;
+  const candidates = [];
 
-  if (titleSlug) {
-    IMAGE_EXTENSIONS.forEach((ext) => {
-      candidates.push(`${titleFolder}/${encodeURIComponent(titleSlug)}.${ext}`);
-    });
-  }
+  if (titleSlug) candidates.push(...pathsWithExtensions(titleFolder, titleSlug));
+
   if (systemSlug && systemSlug !== titleSlug) {
-    // Zuerst der genaue Systemname, danach ohne angehängte Edition/Versionsnummer
-    // ("dungeons_and_dragons_5e" -> "dungeons_and_dragons", "das_schwarze_auge_5"
-    // -> "das_schwarze_auge"), damit ein Bild pro System für alle Editionen reicht.
-    const systemSlugs = [systemSlug];
+    candidates.push(...pathsWithExtensions(DEFAULT_IMAGE_FOLDER, systemSlug));
+    // Zusätzlich ohne angehängte Edition/Versionsnummer ("..._5e", "..._7e", "..._5"),
+    // damit ein Bild pro System für alle Editionen reicht.
     const withoutEdition = systemSlug.replace(/(_\d+[a-z]{0,2})+$/, "");
-    if (withoutEdition && withoutEdition !== systemSlug) systemSlugs.push(withoutEdition);
-    systemSlugs.forEach((slug) => {
-      IMAGE_EXTENSIONS.forEach((ext) => {
-        candidates.push(`${DEFAULT_IMAGE_FOLDER}/${encodeURIComponent(slug)}.${ext}`);
-      });
-    });
+    if (withoutEdition && withoutEdition !== systemSlug) {
+      candidates.push(...pathsWithExtensions(DEFAULT_IMAGE_FOLDER, withoutEdition));
+    }
   }
   return candidates;
 }
 
-// Platzhalter, wenn kein Bild gefunden wird: Farbverlauf mit dem Logo statt dem
-// Systemnamen (der steht in Karte/Pop-up ohnehin schon als Text daneben und
-// würde sich sonst doppelt überlagern).
+// Platzhalter-Inhalt: das Logo statt des Systemnamens (der steht in Karte und
+// Pop-up ohnehin schon als Text daneben und würde sich sonst doppelt überlagern).
 function placeholderLogoMarkup() {
   return `<img class="placeholder-logo" src="${DEFAULT_IMAGE_FOLDER}/gc_logo.png" alt="">`;
 }
 
-// Wird per onerror auf dem <img> aufgerufen: probiert die nächste Bild-Variante,
-// und ersetzt das <img> erst durch den Farbplatzhalter, wenn nichts mehr übrig ist.
+// Wird per onerror vom <img> aufgerufen: probiert die nächste Variante aus
+// data-remaining und ersetzt das Bild erst durch den Platzhalter, wenn nichts übrig ist.
 function handleImageError(imgEl) {
-  const remaining = JSON.parse(decodeURIComponent(imgEl.dataset.remaining || "%5B%5D"));
+  const remaining = JSON.parse(decodeURIComponent(imgEl.dataset.remaining));
   if (remaining.length > 0) {
     const [next, ...rest] = remaining;
     imgEl.dataset.remaining = encodeURIComponent(JSON.stringify(rest));
     imgEl.src = next;
     return;
   }
-  const div = document.createElement("div");
-  div.className = imgEl.dataset.placeholderClass;
-  div.style.background = hashColor(imgEl.dataset.system);
-  div.innerHTML = placeholderLogoMarkup();
-  imgEl.replaceWith(div);
+  const placeholder = document.createElement("div");
+  placeholder.className = imgEl.dataset.placeholderClass;
+  placeholder.style.background = hashColor(imgEl.dataset.system);
+  placeholder.innerHTML = placeholderLogoMarkup();
+  imgEl.replaceWith(placeholder);
 }
 
+// Liefert das fertige HTML für das Titelbild eines Angebots: ein <img>, das bei
+// Fehlern selbstständig die nächste Variante probiert (und am Ende zum Platzhalter
+// wird), oder direkt den Platzhalter, wenn es keine Kandidaten gibt.
+// imgClass / placeholderClass sind die CSS-Klassen des Bildes bzw. des Platzhalters.
 function buildImageMarkup(offer, imgClass, placeholderClass, options) {
-  if (offer.image) {
-    return `<img class="${imgClass}" src="${offer.image}" alt="${escapeAttr(offer.system)}"
-              onerror="this.outerHTML = '<div class=&quot;${placeholderClass}&quot; style=&quot;background:${hashColor(offer.system)}&quot;>${placeholderLogoMarkup().replace(/"/g, "&quot;")}</div>'">`;
-  }
+  const candidates = offer.image ? [offer.image] : buildImageCandidates(offer, options);
 
-  const candidates = buildImageCandidates(offer, options);
   if (candidates.length === 0) {
     return `<div class="${placeholderClass}" style="background:${hashColor(offer.system)}">${placeholderLogoMarkup()}</div>`;
   }
 
-  const remaining = candidates.slice(1);
   return `<img class="${imgClass}" src="${candidates[0]}" alt="${escapeAttr(offer.system)}"
-            data-remaining="${encodeURIComponent(JSON.stringify(remaining))}"
+            data-remaining="${encodeURIComponent(JSON.stringify(candidates.slice(1)))}"
             data-system="${escapeAttr(offer.system)}"
             data-placeholder-class="${placeholderClass}"
             onerror="handleImageError(this)">`;

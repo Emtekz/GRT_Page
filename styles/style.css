@@ -1,12 +1,33 @@
+/*
+  ============================================================
+  style.css - Grundstil aller Seiten
+  ============================================================
+  Aufbau dieser Datei:
+    1. Farben, Schrift, Grundeinstellungen
+    2. Navbar (oben, bleibt beim Scrollen stehen)
+    3. Ladescreen
+    4. Seitenkopf und Footer
+    5. Zeitslots und Angebotskarten
+    6. Auslastungsbalken
+    7. Info-Pop-up
+    8. Hilfsklasse .hidden (muss zuletzt stehen)
+
+  Die Zeitstrahl-Ansicht ergänzt das in timeline.css, die Experimente in
+  experimente.css und styles/experimente/. Farben nur über die Variablen unten
+  ändern - fast alles andere greift darauf zurück.
+*/
+
+/* ---------- 1. Farben, Schrift, Grundeinstellungen ---------- */
+
 :root {
-  --bg: #16141f;
-  --bg-alt: #1e1b2a;
-  --card-bg: #262238;
-  --card-hover: #322c47;
-  --accent: #d4a24e;
-  --accent-2: #7c5cff;
+  --bg: #16141f;          /* Seitenhintergrund */
+  --bg-alt: #1e1b2a;      /* Pop-up-Hintergrund */
+  --card-bg: #262238;     /* Karten, Kästchen */
+  --card-hover: #322c47;  /* Karten beim Darüberfahren */
+  --accent: #d4a24e;      /* Hauptakzent (Überschriften, Zeiten) */
+  --accent-2: #7c5cff;    /* zweiter Akzent (Hover-Rahmen) */
   --text: #f1eef7;
-  --text-dim: #b3aec2;
+  --text-dim: #b3aec2;    /* gedämpfter Text */
   --border: #3a3450;
   --shadow: rgba(0, 0, 0, 0.45);
   font-family: "Segoe UI", "Trebuchet MS", Verdana, sans-serif;
@@ -36,10 +57,9 @@ body {
   min-height: 100vh;
 }
 
-/* Bei offenem Pop-up (openModal()/closeModal() in script.js/timeline.js)
-   wird die Seite per position:fixed eingefroren, statt overflow:hidden zu
-   setzen - so bleibt die reservierte Scrollbar-Breite unverändert und der
-   Seiteninhalt springt beim Öffnen/Schließen nicht zur Seite. */
+/* Bei offenem Pop-up (openModal()/closeModal() in shared.js) wird die Seite per
+   position:fixed eingefroren statt per overflow:hidden - so ändert sich die
+   Scrollbar-Breite nicht und der Inhalt springt nicht zur Seite. */
 body.modal-open {
   position: fixed;
   left: 0;
@@ -47,9 +67,10 @@ body.modal-open {
   width: 100%;
 }
 
-/* Grid statt Flex, damit die Sprungpillen unabhängig von der Breite des
-   Wechsel-Piktogramms wirklich mittig stehen: äußere Spalten sind gleich
-   breit (1fr/1fr), die mittlere Spalte fasst nur die Pillen selbst. */
+/* ---------- 2. Navbar ---------- */
+
+/* Dreispaltiges Grid (1fr auto 1fr): Links steht der aktuelle Abschnitt, rechts
+   der Button zum Ansichtswechsel. Die Höhe richtet sich nach dem Button. */
 .slot-nav {
   position: sticky;
   top: 0;
@@ -64,17 +85,12 @@ body.modal-open {
   border-bottom: 1px solid var(--border);
 }
 
-/* Zeigt Name + Zeitspanne der Session, die gerade oben im Viewport zu sehen
-   ist (siehe setupNavCurrentSection() in script.js) - ersetzt die früheren
-   Sprunglinks zu Nachmittag/Pause/Abend. Linksbündig und in derselben Größe
-   wie die echte Überschrift in der Section (.slot-heading h2 + .slot-time).
-   Liegt per position:absolute über der ganzen Navbar (statt in deren Grid) und
-   bekommt dieselbe max-width/margin/padding wie <main>, damit der Text exakt
-   denselben Abstand zum linken Rand hat wie die echten Section-Überschriften -
-   und dadurch auch auf schmalen Bildschirmen die volle Breite (statt nur der
-   engen Grid-Spalte neben dem Wechsel-Piktogramm) zur Verfügung hat, ohne
-   abgeschnitten zu werden. Nimmt außerdem nicht mehr an der Navbar-Höhe teil
-   (die richtet sich jetzt nur noch nach dem Piktogramm-Button). */
+/* Name + Zeitspanne des Abschnitts, der gerade oben im Fenster steht (befüllt
+   von setupNavCurrentSection() in script.js). Gleiche Größe wie die echte
+   Überschrift (.slot-heading). Liegt absolut über der ganzen Navbar und hat
+   dieselbe max-width/margin/padding wie <main>: so fluchtet der Text links
+   exakt mit den Überschriften und hat auch auf schmalen Bildschirmen die volle
+   Breite, statt in der engen Grid-Spalte neben dem Button abgeschnitten zu werden. */
 .slot-nav-current-frame {
   position: absolute;
   inset: 0;
@@ -104,14 +120,12 @@ body.modal-open {
   margin-left: 0.5rem;
 }
 
-/* Großes Piktogramm zum Wechseln zwischen Kachel- und Zeitstrahl-Ansicht -
-   liegt in derselben Leiste wie die Sprungnavigation, statt im Header. */
+/* Button zum Wechseln zwischen Kachel- und Zeitstrahl-Ansicht (rechts in der Navbar) */
 .slot-nav-view-toggle {
   grid-column: 3;
   justify-self: end;
-  /* Muss über der absolut positionierten .nav-time-ruler-Kopie liegen (siehe
-     timeline.css), sonst würde die zuletzt gemalt und den Button optisch
-     verdecken, obwohl sie dank pointer-events:none nicht anklickbar ist. */
+  /* Muss über dem absolut positionierten Abschnittstext / der Stunden-Skala
+     (siehe timeline.css) liegen, sonst würde er optisch verdeckt. */
   position: relative;
   z-index: 1;
   display: flex;
@@ -161,10 +175,11 @@ body.modal-open {
   }
 }
 
-/* Verdeckt die komplette Seite (inkl. Header/Navbar), solange loadOffers()
-   noch lädt - so sieht niemand, wie Überschrift/Datum/Kacheln erst noch
-   befüllt werden. Wird per JS (script.js/timeline.js) entfernt, sobald
-   renderDashboard()/renderTimeline() fertig sind. */
+/* ---------- 3. Ladescreen ---------- */
+
+/* Verdeckt die ganze Seite, solange die Angebote noch laden - so sieht niemand,
+   wie Überschrift und Kacheln erst nachträglich befüllt werden. initPage() in
+   shared.js blendet ihn aus (.hidden), sobald die Seite aufgebaut ist. */
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -177,10 +192,6 @@ body.modal-open {
   background: var(--bg);
   color: var(--text-dim);
   font-size: 1rem;
-}
-
-.loading-overlay.hidden {
-  display: none;
 }
 
 .loading-spinner {
@@ -198,6 +209,8 @@ body.modal-open {
   }
 }
 
+/* ---------- 4. Seitenkopf und Footer ---------- */
+
 header.event-header {
   text-align: center;
   padding: 2.5rem 1rem 2rem;
@@ -205,16 +218,11 @@ header.event-header {
   border-bottom: 1px solid var(--border);
 }
 
-/* Ein Grid mit zwei gleich breiten "Platzhalter"-Spalten links/rechts der
-   Überschrift (1fr ... 1fr) statt fester Breakpoints: das Logo sitzt in der
-   linken Spalte, direkt neben der (mittleren, immer echt zentrierten) Spalte
-   mit der Überschrift. Weil beide äußeren Spalten dieselbe fr-Größe haben,
-   bleibt die Überschrift bei JEDER Bildschirmbreite exakt mittig, ganz ohne
-   Gefahr, dass Logo und Text sich bei bestimmten Zwischenbreiten überlappen
-   (das war das Problem bei der vorherigen position:absolute-Lösung).
-   Schriftgröße + Logogröße skalieren dazu stufenlos per clamp()+vw mit der
-   Bildschirmbreite mit, statt zwischen zwei festen Werten hin- und
-   herzuspringen (dadurch wirkte der Text auf mittleren Breiten arg klein). */
+/* Logo und Überschrift in einem Grid mit zwei gleich breiten äußeren Spalten
+   (1fr auto 1fr): Das Logo sitzt in der linken Spalte, die Überschrift bleibt in
+   der mittleren Spalte bei jeder Bildschirmbreite exakt zentriert und kann sich
+   nie mit dem Logo überlappen. Schrift- und Logogröße skalieren stufenlos per
+   clamp() mit der Fensterbreite. */
 .event-header-top {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -289,6 +297,8 @@ main {
   color: var(--accent);
   outline: none;
 }
+
+/* ---------- 5. Zeitslots und Angebotskarten ---------- */
 
 .slot-section {
   margin-bottom: 3rem;
@@ -367,6 +377,7 @@ main {
   z-index: 0;
 }
 
+/* Platzhalter, wenn es kein Bild gibt: Farbverlauf (inline gesetzt) mit Logo */
 .offer-card .offer-placeholder {
   position: absolute;
   inset: 0;
@@ -375,12 +386,6 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 1rem;
-  font-weight: 700;
-  font-size: 1.3rem;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   z-index: 0;
 }
 
@@ -456,10 +461,11 @@ main {
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Auslastungsanzeige (Füllstand der Spielerplätze) */
-/* Ein Segment pro Platz statt einem durchgehenden Balken - so sieht man auf
-   einen Blick sowohl die grobe Auslastung (Ampelfarbe) als auch die genaue
-   Anzahl freier/belegter Plätze. */
+/* ---------- 6. Auslastungsbalken ---------- */
+
+/* Ein Segment pro Spielerplatz statt eines durchgehenden Balkens: so sieht man
+   auf einen Blick die grobe Auslastung (Ampelfarbe) und die genaue Anzahl
+   freier/belegter Plätze (siehe buildFillSegments() in shared.js). */
 .fill-bar {
   display: flex;
   gap: 2px;
@@ -488,13 +494,8 @@ main {
   background: linear-gradient(90deg, #e74c3c, #c0392b);
 }
 
-.hidden {
-  display: none;
-}
-
-/* Auf schmalen Bildschirmen 2 Karten pro Reihe statt nur einer - Schrift/
-   Innenabstand etwas kompakter, damit es bei der geringeren Kartenbreite
-   noch gut lesbar bleibt. */
+/* Handy: 2 Karten pro Reihe statt mehrerer, Schrift und Innenabstand etwas
+   kompakter, damit alles bei der geringeren Kartenbreite lesbar bleibt. */
 @media (max-width: 700px) {
   .offer-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -526,7 +527,9 @@ main {
   }
 }
 
-/* Modal */
+/* ---------- 7. Info-Pop-up ---------- */
+
+/* Der Hintergrund hinter dem Pop-up wird nur unscharf (kein Abdunkeln). */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -540,10 +543,8 @@ main {
   z-index: 100;
 }
 
-.modal-overlay.hidden {
-  display: none;
-}
-
+/* Feste Höhe: Bild, Kennzahlen und Balken bleiben stehen, nur die Beschreibung
+   (.modal-description) scrollt. */
 .modal {
   background: var(--bg-alt);
   border: 1px solid var(--border);
@@ -558,9 +559,9 @@ main {
   flex-direction: column;
 }
 
-/* Bild geht fließend in den Pop-Up-Hintergrund über (Verlauf via ::after) -
-   System/Titel liegen als Overlay direkt auf dem Bild, damit im Content-
-   Bereich darunter Platz für die Beschreibung frei bleibt. */
+/* Bildbereich: Das Bild geht per Verlauf (::after) fließend in den Pop-up-
+   Hintergrund über, System und Titel liegen als Overlay direkt darauf - so
+   bleibt darunter mehr Platz für die Beschreibung. */
 .modal #modal-image-slot {
   position: relative;
   flex-shrink: 0;
@@ -592,16 +593,11 @@ main {
   border-radius: 14px 14px 0 0;
 }
 
+/* Platzhalter ohne Bild: Logo mittig auf dem Farbverlauf */
 .modal .modal-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 0.5rem;
-  font-weight: 700;
-  font-size: 1.4rem;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .modal-image-overlay {
@@ -721,9 +717,9 @@ main {
   line-height: 1;
 }
 
-/* Kleine Markierung neben "Beschreibung:", wenn es zum Angebot eine Content
-   Warning gibt - der Text selbst steht mit in der Beschreibung (siehe
-   descriptionEl in openModal()), keine eigene Box/kein eigenes Element mehr. */
+/* Content Warning: kleine rote Markierung neben "Beschreibung:" (.content-warning-
+   flag) und der Warntext als roter, durchsichtiger Kasten am Ende der Beschreibung
+   (.content-warning-text) - beides wird in openModal() (shared.js) befüllt. */
 .content-warning-flag {
   display: inline-flex;
   align-items: center;
@@ -738,10 +734,6 @@ main {
   font-weight: 700;
   letter-spacing: 0.02em;
   vertical-align: middle;
-}
-
-.content-warning-flag.hidden {
-  display: none;
 }
 
 .content-warning-text {
@@ -793,4 +785,13 @@ main {
   margin-top: 1rem;
   font-size: 0.9rem;
   color: var(--text-dim);
+}
+
+/* ---------- 8. Hilfsklasse ---------- */
+
+/* Blendet ein Element aus (per JS gesetzt/entfernt). Steht bewusst GANZ am Ende:
+   Bei gleicher Spezifität gewinnt die spätere Regel - nur so schlägt .hidden die
+   display-Angaben anderer Klassen (z.B. .loading-overlay, .modal-overlay). */
+.hidden {
+  display: none;
 }

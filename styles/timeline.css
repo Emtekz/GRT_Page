@@ -1,22 +1,25 @@
-/* Zusätzliche Styles für die Zeitstrahl-Testansicht (timeline.html) */
+/*
+  ============================================================
+  timeline.css - Zusatz-Styles für den Zeitstrahl (pages/timeline.html)
+  ============================================================
+  Wird zusätzlich zu style.css geladen. Aufbau:
+    1. Stunden-Skala in der Navbar
+    2. Zeitstrahl: Gitterlinien, Pausen-Bänder, Angebots-Balken
+    3. Mobile: Slots nebeneinander zum Wischen
 
-.timeline-wrapper {
-  padding-bottom: 1rem;
-}
+  Gebaut wird alles von timeline.js.
+*/
 
-/* EXPERIMENT: Kopie der Stunden-Skala in der Navbar (Desktop: kompletter Tag,
-   Mobile: der Zeitraum, zu dem gerade hingeswipt wurde - siehe
-   renderNavTimeRuler()/updateNavRuler() in timeline.js) - liegt per
-   position:absolute über der kompletten Navbar (statt im Grid). Drei Ebenen,
-   damit die Prozent-Positionen der Ticks exakt zu denen im echten Lineal passen:
-   .nav-time-ruler       volle Navbar-Breite (Verankerung, kein Padding)
-   .nav-time-ruler-frame normaler Block mit derselben max-width/margin/padding
-                         wie <main> - schrumpft hier "echt" (nicht nur prozentual)
-   .nav-time-ruler-track kein eigenes Padding, wird dadurch exakt so breit wie
-                         <main>s Innenbereich (= Breite des echten Lineals) und
-                         ist selbst die Bezugsgröße für die Tick-Prozente.
-   pointer-events:none, damit das Wechsel-Piktogramm (Grid-Spalte 3, malt sich
-   im DOM danach automatisch darüber) weiterhin klickbar bleibt. */
+/* ---------- 1. Stunden-Skala in der Navbar ---------- */
+
+/* Die Skala (#nav-time-ruler) liegt absolut über der ganzen Navbar. Drei Ebenen,
+   damit die Prozent-Positionen der Marken exakt zu den Gitterlinien im Zeitstrahl
+   passen:
+     .nav-time-ruler        volle Navbar-Breite (nur Verankerung, kein Padding)
+     .nav-time-ruler-frame  dieselbe max-width/margin/padding wie <main>
+     .nav-time-ruler-track  ohne eigenes Padding, also exakt so breit wie der
+                            Innenbereich von <main> = Bezugsgröße der Prozente
+   pointer-events:none, damit der Wechsel-Button darunter klickbar bleibt. */
 .nav-time-ruler {
   position: absolute;
   inset: 0;
@@ -48,9 +51,9 @@
   transform: translate(-100%, -50%);
 }
 
-/* Name + Zeitspanne des Zeitraums (z.B. "Nachmittag  13:00 - 18:00 Uhr") über
-   den Stunden-Ticks in der Navbar - nur auf Mobile (siehe updateNavRuler() in
-   timeline.js), auf Desktop gibt es keinen einzelnen "aktiven" Zeitraum. */
+/* Überschrift (z.B. "Nachmittag 13:00 - 18:00 Uhr") und Wisch-Hinweis über den
+   Stunden-Marken - nur auf Mobile sichtbar (siehe unten), auf dem Desktop gibt
+   es keinen einzelnen "aktuellen" Zeitraum. */
 .nav-slot-heading {
   display: none;
 }
@@ -61,18 +64,13 @@
   margin-left: 0.4rem;
 }
 
-/* Dezenter, einzeiliger Swipe-Hinweis zwischen Überschrift und Stunden-Ticks -
-   nur Text, keine Icons, damit die Navbar dadurch nicht zu hoch/massiv wird. */
 .nav-slot-hint {
   display: none;
 }
 
 @media (max-width: 700px) {
-  /* Etwas mehr Luft über der Überschrift, plus Platz für Überschrift +
-     Swipe-Hinweis + Stunden-Ticks untereinander - bewusst kompakt gehalten,
-     damit die Navbar nicht zu hoch/massiv wirkt. Nur auf der Zeitstrahl-Seite
-     (dort steht #nav-time-ruler in der Navbar) - style.css/timeline.css werden
-     auf beiden Seiten geladen, die Kachel-Ansicht braucht diese Extra-Höhe nicht. */
+  /* Höhere Navbar: Platz für Überschrift, Hinweis und Stunden-Marken untereinander
+     (nur auf dieser Seite - hier steht #nav-time-ruler in der Navbar). */
   .slot-nav:has(#nav-time-ruler) {
     min-height: 100px;
   }
@@ -86,10 +84,8 @@
     padding-bottom: 0.5rem;
   }
 
-  /* Wechsel-Piktogramm vertikal mittig zwischen Oberkante der Navbar und der
-     Stunden-Skala (nicht über die gesamte Navbar-Höhe inkl. Skala zentriert).
-     Der Selektor greift nur auf dieser Seite (hier steht #nav-time-ruler
-     direkt davor), die Kachel-Ansicht bleibt unberührt. */
+  /* Ansichts-Button vertikal mittig zwischen Navbar-Oberkante und Stunden-Marken
+     (statt über die gesamte Navbar-Höhe zentriert). */
   #nav-time-ruler + .slot-nav-view-toggle {
     align-self: start;
     margin-top: 5px;
@@ -129,59 +125,23 @@
   }
 }
 
-/* Schließt die Standard-Lücke von main (padding-top: 2rem aus style.css),
-   damit die Zeitleiste direkt am Header andockt statt mit sichtbarem
-   Zwischenraum darüber zu schweben. Nur Desktop: dort ist die Zeitleiste das
-   erste Element im Container - auf Mobile ist es die "Nachmittag"-Überschrift,
-   die den normalen Abstand zum Header behalten soll. */
+/* Schließt auf dem Desktop die Standard-Lücke über <main> (padding-top aus
+   style.css), damit der Zeitstrahl direkt an der Navbar beginnt. Auf Mobile
+   bleibt der normale Abstand. */
 @media (min-width: 701px) {
   #timeline-container {
     margin-top: -2rem;
   }
 }
 
-.timeline-ruler {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  height: 68px;
-  margin-bottom: 0;
+/* ---------- 2. Zeitstrahl ---------- */
+
+.timeline-wrapper {
+  padding-bottom: 1rem;
 }
 
-/* Bleed über die Zeitstrahl-Breite hinaus, damit die äußersten Gitterlinien
-   beim Scrollen sauber darunter verschwinden. Nur ±16px, weil das auf Mobile
-   sicher innerhalb des Innenabstands von main (1.5rem) bleibt - ragt der Bleed
-   über die eigentliche .timeline-slot-section hinaus, wird die Section durch
-   die CSS-Overflow-Kopplung (overflow-y:auto erzwingt overflow-x:auto/hidden)
-   selbst horizontal "scrollbar", was den Slot-Wechsel-Swipe kaputt macht.
-   Eigenes Element statt breiterer .timeline-ruler, damit die Prozent-Positionen
-   der Uhrzeiten unverändert bleiben. */
-.timeline-ruler::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  background: linear-gradient(to bottom, rgba(22, 20, 31, 0.8) 0%, rgba(22, 20, 31, 0.4) 45%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
-}
-
-/* Desktop: durchgehender Zeitstrahl ohne verschachtelte Scroll-Container -
-   dort kann der Bleed sicher bis zum echten Bildschirmrand reichen (siehe
-   Begründung weiter oben bei .timeline-ruler::before). */
-@media (min-width: 701px) {
-  .timeline-ruler::before {
-    left: 50%;
-    right: auto;
-    width: 100vw;
-    transform: translateX(-50%);
-  }
-}
-
+/* Stunden-Marke; Position (left) wird per JS gesetzt. Die erste/letzte Marke
+   wird an der Kante ausgerichtet statt zentriert. */
 .timeline-tick {
   position: absolute;
   top: 1rem;
@@ -212,6 +172,7 @@
   background: var(--border);
 }
 
+/* Gestreiftes Band für Pausen und Lücken zwischen den Slots */
 .timeline-break {
   position: absolute;
   top: 0;
@@ -235,6 +196,9 @@
   letter-spacing: 0.08em;
 }
 
+/* Angebots-Balken. Position, Breite und Zeile setzt buildTimelineBar() inline.
+   Aufbau wie die Karten: Bild/Farbverlauf füllt den Balken, der Text liegt mit
+   dunklem Verlauf (.offer-overlay) darüber. */
 .timeline-bar {
   position: absolute;
   border-radius: 8px;
@@ -253,8 +217,6 @@
   outline: none;
 }
 
-/* Titelbild/Farbverlauf füllt den ganzen Balken, Text liegt (mit Verlauf für
-   Lesbarkeit) darüber - gleiches Prinzip wie bei den Karten im Dashboard. */
 .timeline-bar .offer-image,
 .timeline-bar .offer-placeholder {
   position: absolute;
@@ -269,12 +231,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 0.4rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .timeline-bar .offer-overlay {
@@ -334,16 +290,14 @@
   -webkit-line-clamp: 2;
 }
 
-/* Mobile: pro Slot (Nachmittag/Pause/Abend) ein eigener Mini-Zeitstrahl. Alle
-   Slots liegen nebeneinander in einem horizontal scrollbaren Streifen mit
-   Scroll-Snap - swipen statt zusammenquetschen, siehe renderTimelineBySlot()
-   in timeline.js.
-   .slot-heading kommt bereits aus style.css (gleiche Optik wie in der
-   Kachel-Ansicht).
-   Vertikal scrollt hier bewusst die ganze Seite (kein eigener Scroll-Container
-   pro Section) - die sticky .timeline-ruler bleibt dadurch auf Mobile nicht
-   oben fixiert, das ist der bewusste Trade-off für normales Scroll-Verhalten.
-   zusammenquetschen. */
+/* ---------- 3. Mobile: Slots nebeneinander zum Wischen ---------- */
+
+/* Alle Slots (Nachmittag/Pause/Abend) liegen nebeneinander in einem horizontal
+   wischbaren Streifen mit Scroll-Snap (siehe renderTimelineBySlot() in timeline.js).
+   Vertikal scrollt bewusst die ganze Seite, es gibt keinen eigenen Scroll-
+   Container pro Slot. Dafür keine Höhe/overflow-y an Streifen oder Sections setzen:
+   overflow-x:auto erzwingt sonst auch overflow-y:auto und macht sie zu
+   Scroll-Containern (Swipe-Probleme). */
 .timeline-slot-scroller {
   display: flex;
   align-items: flex-start;
