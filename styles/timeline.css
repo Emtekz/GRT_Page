@@ -86,13 +86,13 @@
     padding-bottom: 0.5rem;
   }
 
-  /* Wechsel-Piktogramm knapp unterhalb der Mitte der Überschrift ("Nachmittag"
-     etc.), statt über die gesamte (jetzt höhere) Navbar vertikal zentriert zu
-     sein. Der Selektor greift nur auf dieser Seite (hier steht #nav-time-ruler
+  /* Wechsel-Piktogramm vertikal mittig zwischen Oberkante der Navbar und der
+     Stunden-Skala (nicht über die gesamte Navbar-Höhe inkl. Skala zentriert).
+     Der Selektor greift nur auf dieser Seite (hier steht #nav-time-ruler
      direkt davor), die Kachel-Ansicht bleibt unberührt. */
   #nav-time-ruler + .slot-nav-view-toggle {
     align-self: start;
-    margin-top: 11px;
+    margin-top: 5px;
   }
 
   .nav-slot-heading {
