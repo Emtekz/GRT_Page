@@ -113,6 +113,16 @@ function getUiText(language) {
   return UI_TEXT[language] || UI_TEXT.DE;
 }
 
+// Vereinheitlicht Uhrzeiten aus dem Sheet auf "HH:MM", egal ob dort "18", "18.30"
+// oder "18:30 Uhr" steht (Google Sheets liefert je nach Zellformat auch nur "18").
+// Alles Unlesbare wird unverändert durchgereicht.
+function normalizeTime(value) {
+  const text = String(value || "").trim();
+  const m = text.match(/^(\d{1,2})(?:[:.](\d{1,2}))?\s*(?:Uhr)?$/i);
+  if (!m) return text;
+  return `${m[1].padStart(2, "0")}:${(m[2] || "0").padStart(2, "0")}`;
+}
+
 // Liest "Label:" / Wert-Paare aus dem Kopfbereich des Sheets (Zeilen vor der Tabelle).
 function parseMetaBlock(metaRows) {
   const meta = {};
@@ -165,8 +175,8 @@ function applyCategoryTable(metaRows) {
 function applyPauseCategoryRow(row) {
   const pauseSlot = SLOTS.find((s) => s.id === "pause");
   if (pauseSlot && row["Startzeit"] && row["Endzeit"]) {
-    pauseSlot.start = row["Startzeit"];
-    pauseSlot.end = row["Endzeit"];
+    pauseSlot.start = normalizeTime(row["Startzeit"]);
+    pauseSlot.end = normalizeTime(row["Endzeit"]);
   }
 
   const pauseOffer = EXTRA_OFFERS.find((o) => o.slotId === "pause");
@@ -219,8 +229,8 @@ function getPlayerNames(row) {
 }
 
 function rowToOffer(row, index, range) {
-  const startTime = row["Startzeit"] || "";
-  const endTime = row["Endzeit"] || "";
+  const startTime = normalizeTime(row["Startzeit"]);
+  const endTime = normalizeTime(row["Endzeit"]);
   const playerNames = getPlayerNames(row);
   return {
     id: `sheet-${index}`,
@@ -239,8 +249,15 @@ function rowToOffer(row, index, range) {
     startTime,
     endTime,
     description: row["Abenteuerbeschreibung"] || "",
-    contentWarning: isBlankPlaceholder(row["Content Warnings"] || "") ? "" : (row["Content Warnings"] || "").trim()
+    contentWarning: readContentWarning(row)
   };
+}
+
+// Spalte heißt im Sheet mal "Content Warning", mal "Content Warnings" - beides gilt.
+// Leere Zellen und Platzhalter wie "-" bedeuten: keine Content Warning.
+function readContentWarning(row) {
+  const value = (row["Content Warnings"] || row["Content Warning"] || "").trim();
+  return isBlankPlaceholder(value) ? "" : value;
 }
 
 async function loadOffersFromSheet() {

@@ -72,11 +72,26 @@ function buildImageCandidates(offer, options) {
     });
   }
   if (systemSlug && systemSlug !== titleSlug) {
-    IMAGE_EXTENSIONS.forEach((ext) => {
-      candidates.push(`${DEFAULT_IMAGE_FOLDER}/${encodeURIComponent(systemSlug)}.${ext}`);
+    // Zuerst der genaue Systemname, danach ohne angehängte Edition/Versionsnummer
+    // ("dungeons_and_dragons_5e" -> "dungeons_and_dragons", "das_schwarze_auge_5"
+    // -> "das_schwarze_auge"), damit ein Bild pro System für alle Editionen reicht.
+    const systemSlugs = [systemSlug];
+    const withoutEdition = systemSlug.replace(/(_\d+[a-z]{0,2})+$/, "");
+    if (withoutEdition && withoutEdition !== systemSlug) systemSlugs.push(withoutEdition);
+    systemSlugs.forEach((slug) => {
+      IMAGE_EXTENSIONS.forEach((ext) => {
+        candidates.push(`${DEFAULT_IMAGE_FOLDER}/${encodeURIComponent(slug)}.${ext}`);
+      });
     });
   }
   return candidates;
+}
+
+// Platzhalter, wenn kein Bild gefunden wird: Farbverlauf mit dem Logo statt dem
+// Systemnamen (der steht in Karte/Pop-up ohnehin schon als Text daneben und
+// würde sich sonst doppelt überlagern).
+function placeholderLogoMarkup() {
+  return `<img class="placeholder-logo" src="${DEFAULT_IMAGE_FOLDER}/gc_logo.png" alt="">`;
 }
 
 // Wird per onerror auf dem <img> aufgerufen: probiert die nächste Bild-Variante,
@@ -92,19 +107,19 @@ function handleImageError(imgEl) {
   const div = document.createElement("div");
   div.className = imgEl.dataset.placeholderClass;
   div.style.background = hashColor(imgEl.dataset.system);
-  div.textContent = imgEl.dataset.system;
+  div.innerHTML = placeholderLogoMarkup();
   imgEl.replaceWith(div);
 }
 
 function buildImageMarkup(offer, imgClass, placeholderClass, options) {
   if (offer.image) {
     return `<img class="${imgClass}" src="${offer.image}" alt="${escapeAttr(offer.system)}"
-              onerror="this.outerHTML = '<div class=&quot;${placeholderClass}&quot; style=&quot;background:${hashColor(offer.system)}&quot;>${offer.system}</div>'">`;
+              onerror="this.outerHTML = '<div class=&quot;${placeholderClass}&quot; style=&quot;background:${hashColor(offer.system)}&quot;>${placeholderLogoMarkup().replace(/"/g, "&quot;")}</div>'">`;
   }
 
   const candidates = buildImageCandidates(offer, options);
   if (candidates.length === 0) {
-    return `<div class="${placeholderClass}" style="background:${hashColor(offer.system)}">${offer.system}</div>`;
+    return `<div class="${placeholderClass}" style="background:${hashColor(offer.system)}">${placeholderLogoMarkup()}</div>`;
   }
 
   const remaining = candidates.slice(1);

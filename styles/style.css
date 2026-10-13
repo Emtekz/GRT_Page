@@ -384,6 +384,17 @@ main {
   z-index: 0;
 }
 
+/* Logo im Platzhalter (siehe placeholderLogoMarkup() in image-resolver.js) */
+.placeholder-logo {
+  width: auto;
+  height: auto;
+  max-width: 36%;
+  max-height: 55%;
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+}
+
 .offer-card .offer-overlay {
   position: absolute;
   inset: 0;
