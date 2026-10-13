@@ -1,118 +1,72 @@
-// Test-Ansicht: stellt die Angebote aus data.js / sheet-loader.js als horizontalen Zeitstrahl dar.
+/*
+  ============================================================
+  timeline.js - Zeitstrahl-Ansicht (pages/timeline.html)
+  ============================================================
+  Stellt die Angebote als Zeitstrahl dar: jede Zeile ist eine Spur, ein Angebot
+  ein Balken, dessen Position und Breite sich aus Start- und Endzeit ergibt.
+
+  - Desktop:  EIN durchgehender Zeitstrahl über den ganzen Tag.
+  - Mobile:   pro Zeitslot ein eigener Mini-Zeitstrahl, die Slots liegen
+              nebeneinander und lassen sich wischen (Scroll-Snap).
+  - Die Stunden-Skala sitzt in der Navbar (#nav-time-ruler) und bleibt dort beim
+    Scrollen stehen; auf Mobile zeigt sie den Zeitraum des aktuellen Slots.
+
+  Pop-up und Seitenstart kommen aus shared.js, Slot-Zeiträume aus sheet-loader.js
+  (computeSlotRanges), Bilder aus image-resolver.js.
+*/
 
 const ROW_HEIGHT = 100; // Höhe je Zeile im Zeitstrahl (px)
 const ROW_GAP = 12; // Lücke zwischen den Zeilen (px), auch oberhalb der ersten Zeile
 
-// Auf schmalen Bildschirmen wird der Zeitstrahl statt einem durchgehenden Band
-// (13:00-00:00, zu breit für ein Handy) in einen eigenen, auf 100% Breite
-// skalierten Mini-Zeitstrahl pro Slot (Nachmittag/Pause/Abend) aufgeteilt -
-// dadurch passt jeder Slot komplett ins Display, ganz ohne horizontales Scrollen.
+// Unterhalb dieser Breite gilt die Mobile-Variante (muss zum Breakpoint in
+// timeline.css passen). Ein durchgehender Tag (13:00-00:00) wäre auf einem
+// Handy zu schmal, deshalb dort ein Mini-Zeitstrahl pro Slot.
 const MOBILE_QUERY = "(max-width: 700px)";
 
-let OFFERS = [];
+// ------------------------------------------------------------
+// Zeit-Berechnung
+// ------------------------------------------------------------
 
-// Escaped Text für die Verwendung in innerHTML (u.a. für die rot markierte
-// Content Warning am Ende von modal-description).
-function escapeHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+// 810 -> "13:30" (Werte über 24:00 laufen wieder bei 00:00 los)
+function formatMinutesAsTime(minutes) {
+  const wrapped = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
 }
 
-// Auslastung: nur relevant, wenn currentPlayers bekannt ist (z.B. aus dem Google Sheet)
-function hasFillInfo(offer) {
-  return offer.currentPlayers !== undefined && offer.currentPlayers !== null && offer.maxPlayers > 0;
-}
-
-function fillPercent(offer) {
-  if (!offer.maxPlayers) return 0;
-  return Math.min(100, Math.round((offer.currentPlayers / offer.maxPlayers) * 100));
-}
-
-// Ampel-Farbe je nach Auslastung: <50% grün, 50-99% gelb, 100% rot
-function fillLevelClass(offer) {
-  const pct = fillPercent(offer);
-  if (pct >= 100) return "fill-full";
-  if (pct >= 50) return "fill-mid";
-  return "fill-low";
-}
-
-// Ein Segment pro Platz (max. Spieleranzahl), die ersten currentPlayers davon
-// gefüllt in der Ampel-Farbe - so sieht man auf einen Blick sowohl den Prozentwert
-// (Ampel-Farbe) als auch die konkrete Anzahl freier/belegter Plätze.
-function buildFillSegments(offer) {
-  const total = offer.maxPlayers;
-  const filled = Math.min(offer.currentPlayers, total);
-  const levelClass = fillLevelClass(offer);
-  let html = "";
-  for (let i = 0; i < total; i++) {
-    html += `<span class="fill-segment${i < filled ? ` filled ${levelClass}` : ""}"></span>`;
-  }
-  return html;
-}
-
-function buildFillBarMarkup(offer) {
-  if (!hasFillInfo(offer)) return "";
-  return `<div class="fill-bar">${buildFillSegments(offer)}</div>`;
-}
-
-// hashColor() und buildImageMarkup() kommen aus image-resolver.js
-
-// timeToMinutesRaw() kommt bereits aus sheet-loader.js (vor dieser Datei eingebunden)
-
-function formatMinutesAsTime(min) {
-  const m = ((min % 1440) + 1440) % 1440;
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
-
-// Ermittelt Start-/Endzeit der Gesamtachse und normalisiert Zeiten,
-// die über Mitternacht hinausgehen (z.B. Slotende "00:00" -> 24:00).
-function computeTimelineRange() {
-  const globalStartMin = Math.min(...SLOTS.map((s) => timeToMinutesRaw(s.start)));
-
-  function normalize(min) {
-    return min < globalStartMin ? min + 1440 : min;
-  }
-
-  const slotRanges = SLOTS.map((s) => ({
-    ...s,
-    startMin: normalize(timeToMinutesRaw(s.start)),
-    endMin: normalize(timeToMinutesRaw(s.end))
-  }));
-
-  const globalEndMin = Math.max(...slotRanges.map((s) => s.endMin));
-
-  return { globalStartMin, globalEndMin, slotRanges, normalize };
-}
-
+// Start-/Endzeit eines Angebots in Minuten auf der Zeitachse (siehe computeSlotRanges)
 function getOfferRange(offer, range) {
-  const slot = range.slotRanges.find((s) => s.id === offer.slotId);
-  const startRaw = offer.startTime || slot.start;
-  const endRaw = offer.endTime || slot.end;
+  const times = offerTimes(offer);
   return {
-    startMin: range.normalize(timeToMinutesRaw(startRaw)),
-    endMin: range.normalize(timeToMinutesRaw(endRaw))
+    startMin: range.normalize(timeToMinutes(times.start)),
+    endMin: range.normalize(timeToMinutes(times.end))
   };
 }
 
-function toPercent(min, range) {
-  return ((min - range.globalStartMin) / (range.globalEndMin - range.globalStartMin)) * 100;
+// Minuten -> Position auf der Achse in Prozent (0% = Anfang, 100% = Ende)
+function toPercent(minutes, range) {
+  return ((minutes - range.globalStartMin) / (range.globalEndMin - range.globalStartMin)) * 100;
 }
 
-// Verteilt überlappende Angebote auf mehrere Zeilen (wie ein Kalender-Zeitstrahl).
-// Verteilt Angebote auf Zeilen. Angebote desselben Spielleiters (offer.gmKey)
-// landen dabei immer in derselben Zeile, damit sein Tagesablauf zusammenhängend
-// zu sehen ist - der Name selbst wird dabei nirgends angezeigt, nur intern zum Sortieren genutzt.
+// Alle vollen Stunden innerhalb der Achse, z.B. [780, 840, ...] für 13:00, 14:00, ...
+function hourTicks(range) {
+  const ticks = [];
+  for (let tick = Math.ceil(range.globalStartMin / 60) * 60; tick <= range.globalEndMin; tick += 60) {
+    ticks.push(tick);
+  }
+  return ticks;
+}
+
+// Verteilt die Angebote auf Zeilen: überlappende Angebote kommen in verschiedene
+// Zeilen. Angebote derselben Spielleitung (offer.gmKey) landen nach Möglichkeit
+// immer in derselben Zeile, damit ihr Tagesablauf zusammenhängend zu sehen ist -
+// der Name selbst wird dabei nirgends angezeigt.
 function assignRows(offersWithRange) {
-  const rowEnds = [];
+  const rowEnds = []; // Endzeit des zuletzt platzierten Angebots je Zeile
   const rowIndexByGm = new Map();
 
   function findFreeRow(startMin) {
-    const idx = rowEnds.findIndex((endMin) => endMin <= startMin);
-    return idx === -1 ? rowEnds.length : idx;
+    const index = rowEnds.findIndex((endMin) => endMin <= startMin);
+    return index === -1 ? rowEnds.length : index;
   }
 
   const placed = offersWithRange
@@ -122,6 +76,7 @@ function assignRows(offersWithRange) {
       const gmKey = (entry.offer.gmKey || "").trim();
       let rowIndex = gmKey ? rowIndexByGm.get(gmKey) : undefined;
 
+      // Die Zeile der Spielleitung ist belegt (oder es gibt noch keine): freie suchen
       if (rowIndex === undefined || rowEnds[rowIndex] > entry.startMin) {
         rowIndex = findFreeRow(entry.startMin);
         if (gmKey) rowIndexByGm.set(gmKey, rowIndex);
@@ -134,130 +89,94 @@ function assignRows(offersWithRange) {
   return { placed, rowCount: rowEnds.length };
 }
 
-function renderHeader() {
-  document.getElementById("event-title").textContent = EVENT_INFO.title;
-  document.getElementById("event-date").textContent = EVENT_INFO.date;
-  document.getElementById("event-location").textContent = EVENT_INFO.location;
-}
+// ------------------------------------------------------------
+// Zeitstrahl aufbauen
+// ------------------------------------------------------------
 
-// Baut einen kompletten Zeitstrahl-Block (Stunden-Skala + Zeilen mit Angeboten)
-// für den angegebenen Zeitraum und gibt ihn als fertiges .timeline-wrapper-Element
-// zurück. `range` braucht nur globalStartMin/globalEndMin - die Angebote sind
-// bereits mit (auf dieselbe Skala) normalisierten startMin/endMin annotiert.
-// `breakBands` (optional) sind zusätzliche Pausen-Bänder, die als Overlay über
-// die Zeilen gelegt werden (nur beim durchgehenden Desktop-Zeitstrahl nötig -
-// im mobilen Modus ist die Pause bereits ihr eigener Block).
-// Stunden-Marken für ein Zeitlineal - die äußerste linke/rechte Marke wird an
-// der Kante ausgerichtet statt zentriert, damit sie nicht über den Rand
-// hinausragt (z.B. im horizontal scrollbaren Mobile-Streifen). Wird sowohl für
-// das echte Lineal im Zeitstrahl als auch für dessen Kopie in der Navbar
-// benutzt, damit beide exakt dieselben Prozent-Positionen verwenden.
+// Stunden-Marken für ein Lineal. Die äußerste linke/rechte Marke wird an der Kante
+// ausgerichtet statt zentriert, damit sie nicht über den Rand hinausragt.
 function buildRulerTicks(range) {
-  const frag = document.createDocumentFragment();
-  const firstTick = Math.ceil(range.globalStartMin / 60) * 60;
-  const lastTick = firstTick + Math.floor((range.globalEndMin - firstTick) / 60) * 60;
-  for (let tick = firstTick; tick <= range.globalEndMin; tick += 60) {
+  const ticks = hourTicks(range);
+  const fragment = document.createDocumentFragment();
+  ticks.forEach((tick, i) => {
     const tickEl = document.createElement("div");
-    tickEl.className =
-      "timeline-tick" + (tick === firstTick ? " timeline-tick--first" : tick === lastTick ? " timeline-tick--last" : "");
-    tickEl.style.left = toPercent(tick, range) + "%";
+    const edgeClass = i === 0 ? " timeline-tick--first" : i === ticks.length - 1 ? " timeline-tick--last" : "";
+    tickEl.className = `timeline-tick${edgeClass}`;
+    tickEl.style.left = `${toPercent(tick, range)}%`;
     tickEl.textContent = formatMinutesAsTime(tick);
-    frag.appendChild(tickEl);
-  }
-  return frag;
+    fragment.appendChild(tickEl);
+  });
+  return fragment;
 }
 
-function buildTimelineBlock(offersWithRange, range, breakBands, options) {
+// Ein Balken für ein Angebot (Bild/Farbverlauf als Hintergrund, Text darüber)
+function buildTimelineBar(placed, range) {
+  const offer = placed.offer;
+  const left = toPercent(placed.startMin, range);
+
+  const bar = document.createElement("div");
+  bar.className = "timeline-bar";
+  bar.style.left = `${left}%`;
+  bar.style.width = `${toPercent(placed.endMin, range) - left}%`;
+  bar.style.top = `${placed.rowIndex * ROW_HEIGHT + ROW_GAP}px`;
+  bar.style.height = `${ROW_HEIGHT - ROW_GAP}px`;
+  makeOpenable(bar, offer, { start: formatMinutesAsTime(placed.startMin), end: formatMinutesAsTime(placed.endMin) });
+
+  bar.innerHTML = `
+    ${buildImageMarkup(offer, "offer-image", "offer-placeholder", getImageOptions(offer))}
+    <div class="offer-overlay"></div>
+    <div class="timeline-bar-body">
+      <div class="timeline-bar-header-row">
+        <span class="timeline-bar-system">${escapeHtml(offer.system)}</span>
+        ${languageFlagMarkup(offer, "timeline-bar-language")}
+      </div>
+      <div class="timeline-bar-title">${escapeHtml(offer.title)}</div>
+      ${buildFillBarMarkup(offer)}
+    </div>
+  `;
+  return bar;
+}
+
+// Ein kompletter Zeitstrahl-Block für den Zeitraum `range` (Gitterlinien, optionale
+// Pausen-Bänder, Angebots-Balken). `offersWithRange` sind Einträge {offer, startMin,
+// endMin} auf derselben Achse. `breakBands` ({startMin, endMin}) werden als gestreifte
+// Flächen hinterlegt - nur beim durchgehenden Desktop-Zeitstrahl nötig, auf Mobile
+// ist die Pause ein eigener Block.
+function buildTimelineBlock(offersWithRange, range, breakBands) {
   const { placed, rowCount } = assignRows(offersWithRange);
-  const trackHeight = Math.max(rowCount, 1) * ROW_HEIGHT + ROW_GAP;
 
   const wrapper = document.createElement("div");
   wrapper.className = "timeline-wrapper";
 
-  // EXPERIMENT: Das Lineal (auf Mobile zusätzlich Überschrift/Swipe-Hinweis)
-  // steckt bereits als Kopie in der Navbar (siehe renderNavTimeRuler()/
-  // updateNavRuler()), deshalb entfällt es hier testweise komplett - sowohl
-  // im durchgehenden Desktop-Zeitstrahl als auch pro Slot auf Mobile.
-  const includeRuler = !options || options.includeRuler !== false;
-  if (includeRuler) {
-    const ruler = document.createElement("div");
-    ruler.className = "timeline-ruler";
-    ruler.appendChild(buildRulerTicks(range));
-    wrapper.appendChild(ruler);
-  }
-
-  // Zeilen-Bereich (Gitterlinien, Pausen-Bänder, Angebote)
   const track = document.createElement("div");
   track.className = "timeline-track";
-  track.style.height = trackHeight + "px";
+  track.style.height = `${Math.max(rowCount, 1) * ROW_HEIGHT + ROW_GAP}px`;
 
-  for (let tick = Math.ceil(range.globalStartMin / 60) * 60; tick <= range.globalEndMin; tick += 60) {
+  hourTicks(range).forEach((tick) => {
     const line = document.createElement("div");
     line.className = "timeline-gridline";
-    line.style.left = toPercent(tick, range) + "%";
+    line.style.left = `${toPercent(tick, range)}%`;
     track.appendChild(line);
-  }
-
-  (breakBands || []).forEach((b) => {
-    const band = document.createElement("div");
-    band.className = "timeline-break";
-    const left = toPercent(b.startMin, range);
-    band.style.left = left + "%";
-    band.style.width = toPercent(b.endMin, range) - left + "%";
-    band.innerHTML = "<span>Pause</span>";
-    track.appendChild(band);
   });
 
-  placed.forEach((p) => {
-    const offer = p.offer;
-    const left = toPercent(p.startMin, range);
-    const width = toPercent(p.endMin, range) - left;
-
-    const barSlot = SLOTS.find((s) => s.id === offer.slotId);
-    const isBreakOffer = !!(barSlot && barSlot.isBreak);
-
-    const bar = document.createElement("div");
-    bar.className = "timeline-bar";
-    bar.style.left = left + "%";
-    bar.style.width = width + "%";
-    bar.style.top = p.rowIndex * ROW_HEIGHT + ROW_GAP + "px";
-    bar.style.height = ROW_HEIGHT - ROW_GAP + "px";
-    bar.tabIndex = 0;
-    bar.setAttribute("role", "button");
-    bar.setAttribute("aria-label", `${offer.system}: ${offer.title} - Details anzeigen`);
-
-    const imageOptions = isBreakOffer ? { defaultOnly: true } : undefined;
-
-    bar.innerHTML = `
-      ${buildImageMarkup(offer, "offer-image", "offer-placeholder", imageOptions)}
-      <div class="offer-overlay"></div>
-      <div class="timeline-bar-body">
-        <div class="timeline-bar-header-row">
-          <span class="timeline-bar-system">${offer.system}</span>
-          ${offer.language === "ENG" ? `<img class="timeline-bar-language" src="${DEFAULT_IMAGE_FOLDER}/englisch.png" alt="Englisch">` : ""}
-        </div>
-        <div class="timeline-bar-title">${offer.title}</div>
-        ${buildFillBarMarkup(offer)}
-      </div>
-    `;
-
-    bar.addEventListener("click", () => openModal(offer, p));
-    bar.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        openModal(offer, p);
-      }
-    });
-
-    track.appendChild(bar);
+  (breakBands || []).forEach((band) => {
+    const left = toPercent(band.startMin, range);
+    const bandEl = document.createElement("div");
+    bandEl.className = "timeline-break";
+    bandEl.style.left = `${left}%`;
+    bandEl.style.width = `${toPercent(band.endMin, range) - left}%`;
+    bandEl.innerHTML = "<span>Pause</span>";
+    track.appendChild(bandEl);
   });
+
+  placed.forEach((entry) => track.appendChild(buildTimelineBar(entry, range)));
 
   wrapper.appendChild(track);
   return wrapper;
 }
 
-// Desktop: ein einziger durchgehender Zeitstrahl über den ganzen Tag,
-// echte Lücken und als Pause markierte Slots werden als Bänder hinterlegt.
+// Desktop: ein durchgehender Zeitstrahl über den ganzen Tag. Lücken zwischen den
+// Slots und als Pause markierte Slots werden als Bänder hinterlegt.
 function renderContinuousTimeline(container, range, offersWithRange) {
   const breakBands = [];
 
@@ -267,62 +186,43 @@ function renderContinuousTimeline(container, range, offersWithRange) {
     const gapEnd = sortedSlots[i + 1].startMin;
     if (gapEnd > gapStart) breakBands.push({ startMin: gapStart, endMin: gapEnd });
   }
-
   range.slotRanges
-    .filter((s) => s.isBreak)
-    .forEach((s) => breakBands.push({ startMin: s.startMin, endMin: s.endMin }));
+    .filter((slot) => slot.isBreak)
+    .forEach((slot) => breakBands.push({ startMin: slot.startMin, endMin: slot.endMin }));
 
-  // Das Original-Lineal steckt jetzt (als Kopie) in der Navbar (siehe
-  // renderNavTimeRuler()), deshalb hier weggelassen.
-  container.appendChild(buildTimelineBlock(offersWithRange, range, breakBands, { includeRuler: false }));
+  container.appendChild(buildTimelineBlock(offersWithRange, range, breakBands));
 }
 
-// Mobile: pro Slot ein eigener, auf 100% Breite skalierter Mini-Zeitstrahl -
-// alle Slots liegen nebeneinander in einem horizontal scrollbaren Streifen mit
-// Scroll-Snap (wie ein Kalender-Tageswechsel: swipen statt zusammenquetschen).
+// Mobile: pro Slot ein eigener, auf volle Breite skalierter Mini-Zeitstrahl. Alle
+// Slots liegen nebeneinander in einem horizontal wischbaren Streifen (Scroll-Snap),
+// vertikal scrollt die ganze Seite. Slots ohne Angebote (z.B. eine Pause ohne
+// Programm) entfallen, damit man direkt zwischen Slots mit Programm wischen kann.
 function renderTimelineBySlot(container, range, offersWithRange) {
-  const bySlot = new Map();
-  offersWithRange.forEach((entry) => {
-    const key = entry.offer.slotId;
-    if (!bySlot.has(key)) bySlot.set(key, []);
-    bySlot.get(key).push(entry);
-  });
-
   const scroller = document.createElement("div");
   scroller.className = "timeline-slot-scroller";
 
-  // Slots ohne Angebote (z.B. eine Pause ohne Pausenprogramm) werden komplett
-  // übersprungen, damit man direkt zwischen den Slots mit echtem Programm
-  // hin- und herswipen kann.
-  const slotsWithOffers = range.slotRanges.filter((slot) => (bySlot.get(slot.id) || []).length > 0);
-  const slotEntries = [];
+  const slotEntries = []; // {slot, slotRange} je Section, gleiche Reihenfolge wie im Streifen
+  range.slotRanges.forEach((slot) => {
+    const entries = offersWithRange.filter((entry) => entry.offer.slotId === slot.id);
+    if (entries.length === 0) return;
 
-  // EXPERIMENT: Überschrift, Lineal und Swipe-Hinweis stecken auf Mobile jetzt
-  // als Kopie in der (sticky) Navbar (siehe updateNavRuler() unten) - deshalb
-  // testweise hier weggelassen, um die Dopplung zu vermeiden.
-  slotsWithOffers.forEach((slot) => {
-    const entries = bySlot.get(slot.id);
+    // Jeder Slot bekommt eine eigene Achse von seinem Anfang bis zu seinem Ende
+    const slotRange = { globalStartMin: slot.startMin, globalEndMin: slot.endMin };
+    slotEntries.push({ slot, slotRange });
 
     const section = document.createElement("section");
     section.className = "timeline-slot-section";
     section.id = `timeline-slot-${slot.id}`;
-
-    const slotRange = { globalStartMin: slot.startMin, globalEndMin: slot.endMin };
-    slotEntries.push({ slot, slotRange });
-    section.appendChild(buildTimelineBlock(entries, slotRange, null, { includeRuler: false }));
-
+    section.appendChild(buildTimelineBlock(entries, slotRange));
     scroller.appendChild(section);
   });
-
   container.appendChild(scroller);
 
-  // EXPERIMENT: Navbar-Kopie der Stunden-Skala auch auf Mobile - zeigt das
-  // Lineal des Zeitraums, zu dem gerade hingeswipt wurde, und aktualisiert
-  // sich beim Swipen. Dank Scroll-Snap ist "welcher Zeitraum ist gerade
-  // sichtbar" hier eindeutig bestimmbar - der Abstand zwischen zwei Sections
-  // wird direkt aus dem DOM gelesen (statt einfach scroller.clientWidth
-  // anzunehmen), damit das unabhängig vom CSS immer stimmt.
-  function updateNavRuler() {
+  // Navbar passend zum Slot beschriften, zu dem gerade hingewischt wurde: Name +
+  // Zeitspanne, Wisch-Hinweis und Stunden-Skala. Dank Scroll-Snap ist der aktuelle
+  // Slot eindeutig. Der Abstand zweier Sections wird aus dem DOM gelesen (statt
+  // scroller.clientWidth anzunehmen), damit es unabhängig vom CSS stimmt.
+  function updateNavForCurrentSlot() {
     const headingEl = document.getElementById("nav-slot-heading");
     const hintEl = document.getElementById("nav-slot-hint");
     if (slotEntries.length === 0) {
@@ -331,38 +231,46 @@ function renderTimelineBySlot(container, range, offersWithRange) {
       if (hintEl) hintEl.innerHTML = "";
       return;
     }
+
     const sections = scroller.children;
     const step = sections.length > 1 ? sections[1].offsetLeft - sections[0].offsetLeft : scroller.clientWidth;
     const index = Math.round(scroller.scrollLeft / step) || 0;
-    const clamped = Math.min(Math.max(index, 0), slotEntries.length - 1);
-    const { slot, slotRange } = slotEntries[clamped];
+    const { slot, slotRange } = slotEntries[Math.min(Math.max(index, 0), slotEntries.length - 1)];
+
     renderNavTimeRuler(slotRange);
     if (headingEl) {
-      headingEl.innerHTML = `${slot.label}<span class="nav-slot-time">${slot.start} - ${slot.end} Uhr</span>`;
+      headingEl.innerHTML = `${slot.label}<span class="nav-slot-time">${formatSlotTime(slot)}</span>`;
     }
     if (hintEl) {
       hintEl.textContent = slotEntries.length > 1 ? "Wischen für weitere Sessions" : "";
     }
   }
-  scroller.addEventListener("scroll", updateNavRuler, { passive: true });
-  updateNavRuler();
+
+  scroller.addEventListener("scroll", updateNavForCurrentSlot, { passive: true });
+  updateNavForCurrentSlot();
 }
 
+// Stunden-Skala in der Navbar. Nutzt dieselben Prozent-Positionen wie der Zeitstrahl
+// darunter (buildRulerTicks); das CSS gibt #nav-time-ruler-track dafür dieselbe
+// Breite wie <main>, damit die Marken exakt über den Gitterlinien sitzen.
+function renderNavTimeRuler(range) {
+  const track = document.getElementById("nav-time-ruler-track");
+  if (!track) return;
+  track.innerHTML = "";
+  track.appendChild(buildRulerTicks(range));
+}
+
+// Baut die Seite je nach Bildschirmbreite als Desktop- oder Mobile-Zeitstrahl.
 function renderTimeline() {
-  renderHeader();
+  renderEventHeader();
 
-  const range = computeTimelineRange();
-
-  const offersWithRange = OFFERS.map((offer) => ({
-    offer,
-    ...getOfferRange(offer, range)
-  }));
+  const range = computeSlotRanges();
+  const offersWithRange = OFFERS.map((offer) => ({ offer, ...getOfferRange(offer, range) }));
 
   const container = document.getElementById("timeline-container");
   container.innerHTML = "";
 
-  const isMobile = window.matchMedia(MOBILE_QUERY).matches;
-  if (isMobile) {
+  if (window.matchMedia(MOBILE_QUERY).matches) {
     renderTimelineBySlot(container, range, offersWithRange);
   } else {
     renderContinuousTimeline(container, range, offersWithRange);
@@ -372,120 +280,11 @@ function renderTimeline() {
   }
 }
 
-// EXPERIMENT: Testweise Kopie der Stunden-Skala in die Navbar - bewusst erstmal
-// nur eine Kopie neben dem echten Lineal im Zeitstrahl (noch nichts entfernt/
-// verschoben). Nutzt dieselben Prozent-Positionen wie das echte Lineal (siehe
-// buildRulerTicks()), damit die Marken exakt über dem Zeitstrahl darunter sitzen -
-// das CSS gibt #nav-time-ruler-track dafür dieselbe effektive Breite wie <main>.
-function renderNavTimeRuler(range) {
-  const wrapper = document.getElementById("nav-time-ruler-track");
-  if (!wrapper) return;
-
-  wrapper.innerHTML = "";
-  wrapper.appendChild(buildRulerTicks(range));
-}
-
-function openModal(offer, range) {
-  const overlay = document.getElementById("modal-overlay");
-  const imageSlot = document.getElementById("modal-image-inner");
-  const slot = SLOTS.find((s) => s.id === offer.slotId);
-  const imageOptions = slot && slot.isBreak ? { defaultOnly: true } : undefined;
-  imageSlot.innerHTML = buildImageMarkup(offer, "modal-image", "modal-placeholder", imageOptions);
-
-  const t = getUiText(offer.language);
-
-  document.getElementById("modal-system").textContent = offer.system;
-  document.getElementById("modal-title").textContent = offer.title;
-
-  const modalLanguageEl = document.getElementById("modal-language");
-  if (offer.language === "ENG") {
-    modalLanguageEl.src = `${DEFAULT_IMAGE_FOLDER}/englisch.png`;
-    modalLanguageEl.classList.remove("hidden");
-  } else {
-    modalLanguageEl.classList.add("hidden");
-  }
-
-  document.getElementById("modal-time").innerHTML =
-    `<strong>${formatMinutesAsTime(range.startMin)} - ${formatMinutesAsTime(range.endMin)}${t.timeSuffix}</strong><span>${t.time}</span>`;
-  document.getElementById("modal-players").innerHTML = hasFillInfo(offer)
-    ? `<strong>${offer.currentPlayers} / ${offer.maxPlayers}</strong><span>${t.reservations}</span>`
-    : `<strong>${offer.maxPlayers}</strong><span>${t.maxPlayers}</span>`;
-
-  const fillBarWrapper = document.getElementById("modal-fill-bar");
-  if (hasFillInfo(offer)) {
-    fillBarWrapper.classList.remove("hidden");
-    fillBarWrapper.innerHTML = buildFillSegments(offer);
-  } else {
-    fillBarWrapper.classList.add("hidden");
-    fillBarWrapper.innerHTML = "";
-  }
-
-  document.getElementById("modal-description-label").textContent = t.description;
-
-  const contentWarningFlagEl = document.getElementById("modal-content-warning-flag");
-  contentWarningFlagEl.classList.toggle("hidden", !offer.contentWarning);
-  contentWarningFlagEl.textContent = t.contentWarningFlag;
-  contentWarningFlagEl.title = t.contentWarningFlagTitle;
-
-  const descriptionEl = document.getElementById("modal-description");
-  descriptionEl.innerHTML = offer.contentWarning
-    ? `${escapeHtml(offer.description)}\n\n<span class="content-warning-text"><strong>${t.contentWarningLabel}</strong><br>${escapeHtml(offer.contentWarning)}</span>`
-    : escapeHtml(offer.description);
-
-  const gmEl = document.getElementById("modal-gm");
-  if (offer.gm) {
-    gmEl.textContent = `${t.gm} ${offer.gm}`;
-    gmEl.classList.remove("hidden");
-  } else {
-    gmEl.classList.add("hidden");
-  }
-
-  overlay.classList.remove("hidden");
-  lockPageScroll();
-  document.getElementById("modal-close").focus();
-
-  // Erst NACH dem Sichtbarmachen zurücksetzen (und einen Frame später nochmal
-  // zur Sicherheit) - manche Browser ignorieren scrollTop-Änderungen an noch
-  // unsichtbaren (display:none) Elementen bzw. verschieben die Scroll-Position
-  // erst nach dem Layout wieder.
-  descriptionEl.scrollTop = 0;
-  requestAnimationFrame(() => {
-    descriptionEl.scrollTop = 0;
-  });
-}
-
-function closeModal() {
-  document.getElementById("modal-overlay").classList.add("hidden");
-  unlockPageScroll();
-}
-
-// Friert die Seite optisch am aktuellen Scroll-Stand ein (statt overflow:hidden,
-// das die reservierte Scrollbar-Breite ändern und den Inhalt zur Seite
-// verschieben würde - siehe body.modal-open in style.css).
-function lockPageScroll() {
-  const scrollY = window.scrollY;
-  document.body.dataset.scrollY = scrollY;
-  document.body.style.top = `-${scrollY}px`;
-  document.body.classList.add("modal-open");
-}
-
-function unlockPageScroll() {
-  const scrollY = parseInt(document.body.dataset.scrollY || "0", 10);
-  document.body.classList.remove("modal-open");
-  document.body.style.top = "";
-  window.scrollTo({ top: scrollY, left: 0, behavior: "instant" });
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-  OFFERS = await loadOffers();
-  renderTimeline();
-  document.getElementById("loading-overlay")?.classList.add("hidden");
-
-  // Bei Drehung/Fenstergröße neu rendern (z.B. Wechsel über/unter die Mobile-Schwelle).
-  // Nur bei echter Breitenänderung - auf Mobile feuert "resize" nämlich auch,
-  // wenn beim Scrollen nur die Adressleiste ein-/ausgeblendet wird (Höhe ändert
-  // sich, Breite nicht); ein Neu-Rendern hätte sonst den Swipe-Fortschritt im
-  // Zeitstrahl (Nachmittag/Pause/Abend) zurückgesetzt.
+// Rendert bei Drehung/Fenstergröße neu (z.B. beim Wechsel über/unter die Mobile-
+// Schwelle). Nur bei echter BREITENänderung: Auf dem Handy feuert "resize" auch,
+// wenn beim Scrollen nur die Adressleiste ein-/ausgeblendet wird (Höhe ändert sich,
+// Breite nicht) - ein Neu-Rendern würde sonst den Wisch-Fortschritt zurücksetzen.
+function rerenderOnWidthChange() {
   let resizeTimer;
   let lastWidth = window.innerWidth;
   window.addEventListener("resize", () => {
@@ -494,12 +293,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(renderTimeline, 150);
   });
+}
 
-  document.getElementById("modal-close").addEventListener("click", closeModal);
-  document.getElementById("modal-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "modal-overlay") closeModal();
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
-  });
+document.addEventListener("DOMContentLoaded", async () => {
+  await initPage(renderTimeline);
+  rerenderOnWidthChange();
 });

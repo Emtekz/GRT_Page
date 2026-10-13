@@ -1,66 +1,49 @@
-// Lädt die Angebote aus der veröffentlichten Google-Sheets-CSV (SHEET_CSV_URL in csv-link.js).
-// Fällt automatisch auf FALLBACK_OFFERS zurück, falls das Sheet nicht erreichbar ist.
-//
-// Erwartetes Sheet-Layout:
-//   Kopfbereich (beliebig viele Zeilen) mit "Label:" / Wert-Paaren, z.B.
-//     Eventname: | GcRT 2026        | | | Datum des Events: | 19.09.2026
-//     Eventort:  | GamesCafe ...    | | | Organisator:       | GamesCafe
-//   darin eine kleine Tabelle für Sonder-Angebote wie die Pause:
-//     Kategorie      | Name des Angebots       | Spielleiter | Startzeit | Endzeit | Max. Spieleranzahl
-//     Pausenangebot  | Blood On The Clocktower |             | 18:00     | 19:00   | 15
-//   danach die Haupttabelle mit der Kopfzeile:
-//     System | Name des Abenteuers | Spielleiter | Startzeit | Endzeit | Max. Spieleranzahl
-//     | Anzahl der Spieler | Spieler 1..Spieler 10 | Abenteuerbeschreibung
-//
-// Der Kopfbereich ist optional - fehlt er, wird einfach die erste Zeile als
-// Tabellenkopf angenommen (altes Sheet-Format ohne Event-Metadaten).
+/*
+  ============================================================
+  sheet-loader.js - Lädt die Angebote aus dem Google Sheet
+  ============================================================
+  Liest die veröffentlichte CSV (SHEET_CSV_URL in csv-link.js), macht daraus
+  Angebots-Objekte und überträgt Event-Infos und Pause auf EVENT_INFO / SLOTS /
+  EXTRA_OFFERS (data.js). Ist das Sheet nicht erreichbar, werden stattdessen die
+  FALLBACK_OFFERS aus data.js angezeigt.
 
-function timeToMinutesRaw(t) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+  Erwartetes Sheet-Layout (von oben nach unten):
+
+    1. Kopfbereich mit "Label:" / Wert-Paaren (optional, beliebig viele Zeilen)
+         Event:    | GamesCafe Rollenspieltag 2026 | | | Datum: | 19.09.2026
+         Eventort: | GamesCafe - Luhe Wildenau
+       Bei "Eventname"/"Event" und "Datum des Events"/"Datum" gelten beide Schreibweisen.
+
+    2. Darin eine kleine Tabelle für das Pausenangebot
+         Kategorie     | Name des Angebots       | Sprache | Spielleiter | Startzeit | Endzeit | Max. Spieleranzahl
+         Pausenangebot | Blood On The Clocktower | DE      | ...         | 18:00     | 19:00   | 15
+
+    3. Die Haupttabelle, Kopfzeile beginnt mit "System":
+         System | Name des Abenteuers | Sprache | Spielleiter | Startzeit | Endzeit | Max. Spieleranzahl
+         | Anzahl der Spieler | Spieler 1 ... Spieler 10 | Abenteuerbeschreibung | Content Warning
+
+  Fehlt der Kopfbereich, gilt die erste Zeile als Tabellenkopf (altes Format).
+  Uhrzeiten dürfen als "18:00", "18" oder "18.30" im Sheet stehen (normalizeTime).
+*/
+
+// ------------------------------------------------------------
+// Kleine Helfer
+// ------------------------------------------------------------
+
+// "13:30" -> 810 (Minuten seit Mitternacht)
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
-// Einfacher CSV-Parser mit Unterstützung für "..."-Felder, die Kommas enthalten.
-function parseCSV(text) {
-  const rows = [];
-  let row = [];
-  let field = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        field += c;
-      }
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\r") {
-      // ignorieren
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else {
-      field += c;
-    }
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
+// Vereinheitlicht Uhrzeiten aus dem Sheet auf "HH:MM", egal ob dort "18", "18.30"
+// oder "18:30 Uhr" steht (Google Sheets liefert je nach Zellformat auch nur "18").
+// Alles Unlesbare wird unverändert durchgereicht.
+function normalizeTime(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{1,2})(?:[:.](\d{1,2}))?\s*(?:Uhr)?$/i);
+  if (!match) return text;
+  return `${match[1].padStart(2, "0")}:${(match[2] || "0").padStart(2, "0")}`;
 }
 
 // Erkennt Platzhalter für "leer" (z.B. "/", "-", "--"), die im Sheet statt einer
@@ -73,75 +56,76 @@ function isBlankPlaceholder(value) {
 // egal ob im Sheet "Deutsch", "German", "de" o.ä. steht. Unbekannte Werte
 // werden nur groß geschrieben durchgereicht, damit nichts verloren geht.
 function normalizeLanguage(value) {
-  const v = String(value || "").trim().toLowerCase();
-  if (!v) return "";
-  if (["de", "deu", "ger", "deutsch", "german"].includes(v)) return "DE";
-  if (["en", "eng", "engl", "englisch", "english"].includes(v)) return "ENG";
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  if (["de", "deu", "ger", "deutsch", "german"].includes(text)) return "DE";
+  if (["en", "eng", "engl", "englisch", "english"].includes(text)) return "ENG";
   return value.trim().toUpperCase();
 }
 
-// Feste UI-Texte im Pop-up (script.js/timeline.js), abhängig von offer.language.
-// Die Freitexte (Beschreibung, Content Warning) kommen ja schon in der Sprache
-// aus dem Sheet, wie sie eingetragen wurden - hier geht es nur um die festen
-// Labels drumherum ("Uhrzeit", "Beschreibung:" etc.).
-const UI_TEXT = {
-  DE: {
-    timeSuffix: " Uhr",
-    time: "Uhrzeit",
-    reservations: "Reservierungen",
-    maxPlayers: "max. Spieler",
-    description: "Beschreibung:",
-    contentWarningFlag: "⚠ CW - unter der Beschreibung",
-    contentWarningFlagTitle: "Enthält eine Content Warning, siehe unten",
-    contentWarningLabel: "Content Warning:",
-    gm: "Spielleitung:"
-  },
-  ENG: {
-    timeSuffix: "",
-    time: "Time",
-    reservations: "Reservations",
-    maxPlayers: "max. players",
-    description: "Description:",
-    contentWarningFlag: "⚠ CW - below description",
-    contentWarningFlagTitle: "Contains a content warning, see below",
-    contentWarningLabel: "Content Warning:",
-    gm: "Game Master:"
+// Einfacher CSV-Parser mit Unterstützung für "..."-Felder, die Kommas, Zeilenumbrüche
+// und doppelte Anführungszeichen ("") enthalten dürfen. Ergebnis: Liste von Zeilen,
+// jede Zeile eine Liste von Zellen.
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inQuotes) {
+      if (char === '"' && text[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (char !== "\r") {
+      field += char;
+    }
   }
-};
-
-function getUiText(language) {
-  return UI_TEXT[language] || UI_TEXT.DE;
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
 }
 
-// Vereinheitlicht Uhrzeiten aus dem Sheet auf "HH:MM", egal ob dort "18", "18.30"
-// oder "18:30 Uhr" steht (Google Sheets liefert je nach Zellformat auch nur "18").
-// Alles Unlesbare wird unverändert durchgereicht.
-function normalizeTime(value) {
-  const text = String(value || "").trim();
-  const m = text.match(/^(\d{1,2})(?:[:.](\d{1,2}))?\s*(?:Uhr)?$/i);
-  if (!m) return text;
-  return `${m[1].padStart(2, "0")}:${(m[2] || "0").padStart(2, "0")}`;
-}
+// ------------------------------------------------------------
+// Kopfbereich: Event-Infos und Pausenangebot
+// ------------------------------------------------------------
 
-// Liest "Label:" / Wert-Paare aus dem Kopfbereich des Sheets (Zeilen vor der Tabelle).
+// Liest "Label:" / Wert-Paare aus dem Kopfbereich ("Eventort:" | "Luhe" -> {Eventort: "Luhe"}).
 function parseMetaBlock(metaRows) {
   const meta = {};
   metaRows.forEach((row) => {
     row.forEach((cell, i) => {
       const label = (cell || "").trim();
-      if (label.endsWith(":")) {
-        const value = (row[i + 1] || "").trim();
-        if (value !== "" && !isBlankPlaceholder(value)) {
-          meta[label.slice(0, -1).trim()] = value;
-        }
+      if (!label.endsWith(":")) return;
+      const value = (row[i + 1] || "").trim();
+      if (value !== "" && !isBlankPlaceholder(value)) {
+        meta[label.slice(0, -1).trim()] = value;
       }
     });
   });
   return meta;
 }
 
-// Überträgt die Event-Metadaten aus dem Sheet auf EVENT_INFO, falls im Sheet
-// vorhanden. Ohne Kopfbereich bleiben die lokalen Werte aus data.js erhalten.
+// Überträgt die Event-Infos aus dem Sheet auf EVENT_INFO. Ohne Kopfbereich
+// bleiben die lokalen Werte aus data.js erhalten.
 function applySheetMeta(meta) {
   const title = meta["Eventname"] || meta["Event"];
   const date = meta["Datum des Events"] || meta["Datum"];
@@ -150,75 +134,81 @@ function applySheetMeta(meta) {
   if (meta["Eventort"]) EVENT_INFO.location = meta["Eventort"];
 }
 
-// Liest die kleine "Kategorie"-Tabelle im Kopfbereich (z.B. für das Pausenangebot)
-// und überträgt passende Zeilen auf SLOTS / EXTRA_OFFERS.
+// Liest die kleine "Kategorie"-Tabelle im Kopfbereich und überträgt die Zeile
+// "Pausenangebot" auf den Pause-Slot und das Pausenangebot.
 function applyCategoryTable(metaRows) {
-  const headerIdx = metaRows.findIndex((r) => (r[0] || "").trim() === "Kategorie");
-  if (headerIdx === -1) return;
+  const headerIndex = metaRows.findIndex((row) => (row[0] || "").trim() === "Kategorie");
+  if (headerIndex === -1) return;
 
-  const headers = metaRows[headerIdx].map((h) => h.trim());
-  for (let i = headerIdx + 1; i < metaRows.length; i++) {
-    const row = metaRows[i];
-    if (!row.some((c) => c.trim() !== "")) continue;
-
-    const obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = (row[idx] || "").trim();
-    });
-
-    if (obj["Kategorie"] === "Pausenangebot") {
-      applyPauseCategoryRow(obj);
-    }
-  }
+  const headers = metaRows[headerIndex].map((header) => header.trim());
+  metaRows.slice(headerIndex + 1).forEach((row) => {
+    if (!row.some((cell) => cell.trim() !== "")) return;
+    const values = rowToObject(headers, row);
+    if (values["Kategorie"] === "Pausenangebot") applyPauseRow(values);
+  });
 }
 
-function applyPauseCategoryRow(row) {
-  const pauseSlot = SLOTS.find((s) => s.id === "pause");
+// Zeitraum der Pause und Daten des Pausenangebots (Titel, Plätze, Leitung, Sprache)
+function applyPauseRow(row) {
+  const pauseSlot = SLOTS.find((slot) => slot.id === "pause");
   if (pauseSlot && row["Startzeit"] && row["Endzeit"]) {
     pauseSlot.start = normalizeTime(row["Startzeit"]);
     pauseSlot.end = normalizeTime(row["Endzeit"]);
   }
 
-  const pauseOffer = EXTRA_OFFERS.find((o) => o.slotId === "pause");
-  if (pauseOffer) {
-    const title = row["Name des Angebots"] || "";
-    pauseOffer.title = isBlankPlaceholder(title) ? "" : title;
+  const pauseOffer = EXTRA_OFFERS.find((offer) => offer.slotId === "pause");
+  if (!pauseOffer) return;
 
-    const maxPlayers = parseInt(row["Max. Spieleranzahl"], 10);
-    if (!isNaN(maxPlayers) && maxPlayers > 0) {
-      pauseOffer.maxPlayers = maxPlayers;
-    }
+  // Ein Platzhalter wie "-" als Titel blendet das Pausenangebot aus (siehe loadOffers)
+  const title = row["Name des Angebots"] || "";
+  pauseOffer.title = isBlankPlaceholder(title) ? "" : title;
 
-    const gm = row["Spielleiter"] || "";
-    if (gm && !isBlankPlaceholder(gm)) {
-      pauseOffer.gm = gm;
-    }
+  const maxPlayers = parseInt(row["Max. Spieleranzahl"], 10);
+  if (maxPlayers > 0) pauseOffer.maxPlayers = maxPlayers;
 
-    const language = row["Sprache"] || "";
-    if (language && !isBlankPlaceholder(language)) {
-      pauseOffer.language = normalizeLanguage(language);
-    }
-  }
+  const gm = row["Spielleiter"] || "";
+  if (gm && !isBlankPlaceholder(gm)) pauseOffer.gm = gm;
+
+  const language = row["Sprache"] || "";
+  if (language && !isBlankPlaceholder(language)) pauseOffer.language = normalizeLanguage(language);
 }
 
-// Ordnet einer Startzeit den passenden Slot aus SLOTS zu.
+// ------------------------------------------------------------
+// Zeiträume und Haupttabelle
+// ------------------------------------------------------------
+
+// Rechnet die Slots in Minuten um. Zeiten vor dem Tagesstart gelten als "nach
+// Mitternacht" (z.B. Slotende "00:00" -> 24:00 = 1440), siehe normalize().
+// Wird auch vom Zeitstrahl für seine Zeitachse genutzt.
 function computeSlotRanges() {
-  const globalStartMin = Math.min(...SLOTS.map((s) => timeToMinutesRaw(s.start)));
-  const normalize = (min) => (min < globalStartMin ? min + 1440 : min);
-  const slotRanges = SLOTS.map((s) => ({
-    ...s,
-    startMin: normalize(timeToMinutesRaw(s.start)),
-    endMin: normalize(timeToMinutesRaw(s.end))
+  const globalStartMin = Math.min(...SLOTS.map((slot) => timeToMinutes(slot.start)));
+  const normalize = (minutes) => (minutes < globalStartMin ? minutes + 1440 : minutes);
+  const slotRanges = SLOTS.map((slot) => ({
+    ...slot,
+    startMin: normalize(timeToMinutes(slot.start)),
+    endMin: normalize(timeToMinutes(slot.end))
   }));
-  return { slotRanges, globalStartMin, normalize };
+  const globalEndMin = Math.max(...slotRanges.map((slot) => slot.endMin));
+  return { slotRanges, globalStartMin, globalEndMin, normalize };
 }
 
-function findSlotId(startRaw, range) {
-  const startMin = range.normalize(timeToMinutesRaw(startRaw));
-  const match = range.slotRanges.find((s) => startMin >= s.startMin && startMin < s.endMin);
+// Ordnet eine Startzeit dem passenden Slot zu (unpassende Zeiten landen im ersten Slot).
+function findSlotId(startTime, range) {
+  const startMin = range.normalize(timeToMinutes(startTime));
+  const match = range.slotRanges.find((slot) => startMin >= slot.startMin && startMin < slot.endMin);
   return match ? match.id : range.slotRanges[0].id;
 }
 
+// Kopfzeile + Zeile -> Objekt: (["System", "Name"], ["DSA", "Foo"]) -> {System: "DSA", Name: "Foo"}
+function rowToObject(headers, row) {
+  const object = {};
+  headers.forEach((header, i) => {
+    object[header] = (row[i] || "").trim();
+  });
+  return object;
+}
+
+// Namen der angemeldeten Spieler (Spalten "Spieler 1" bis "Spieler 10")
 function getPlayerNames(row) {
   const names = [];
   for (let i = 1; i <= 10; i++) {
@@ -228,9 +218,16 @@ function getPlayerNames(row) {
   return names;
 }
 
+// Die Spalte heißt im Sheet mal "Content Warning", mal "Content Warnings" - beides
+// gilt. Leere Zellen und Platzhalter wie "-" bedeuten: keine Content Warning.
+function readContentWarning(row) {
+  const value = (row["Content Warnings"] || row["Content Warning"] || "").trim();
+  return isBlankPlaceholder(value) ? "" : value;
+}
+
+// Eine Zeile der Haupttabelle -> Angebots-Objekt (gleiche Felder wie in data.js)
 function rowToOffer(row, index, range) {
   const startTime = normalizeTime(row["Startzeit"]);
-  const endTime = normalizeTime(row["Endzeit"]);
   const playerNames = getPlayerNames(row);
   return {
     id: `sheet-${index}`,
@@ -239,77 +236,67 @@ function rowToOffer(row, index, range) {
     title: row["Name des Abenteuers"] || "",
     language: normalizeLanguage(row["Sprache"]),
     gm: "",
-    // Nur für die Zeilen-Zuordnung im Zeitstrahl (assignRows in timeline.js) -
-    // wird bewusst NIRGENDS angezeigt, siehe gm-Feld oben dafür.
+    // Nur zum Sortieren im Zeitstrahl (assignRows in timeline.js): Angebote
+    // derselben Leitung landen in derselben Zeile. Wird bewusst NIRGENDS
+    // angezeigt, deshalb bleibt das sichtbare Feld gm leer.
     gmKey: (row["Spielleiter"] || "").trim(),
     image: "",
     maxPlayers: parseInt(row["Max. Spieleranzahl"], 10) || 0,
     currentPlayers: playerNames.length,
     playerNames,
     startTime,
-    endTime,
+    endTime: normalizeTime(row["Endzeit"]),
     description: row["Abenteuerbeschreibung"] || "",
     contentWarning: readContentWarning(row)
   };
 }
 
-// Spalte heißt im Sheet mal "Content Warning", mal "Content Warnings" - beides gilt.
-// Leere Zellen und Platzhalter wie "-" bedeuten: keine Content Warning.
-function readContentWarning(row) {
-  const value = (row["Content Warnings"] || row["Content Warning"] || "").trim();
-  return isBlankPlaceholder(value) ? "" : value;
-}
+// ------------------------------------------------------------
+// Laden
+// ------------------------------------------------------------
 
 async function loadOffersFromSheet() {
   const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
   if (!response.ok) throw new Error("CSV-Abruf fehlgeschlagen: " + response.status);
-  const text = await response.text();
-  const allRows = parseCSV(text);
+  const allRows = parseCSV(await response.text());
 
   // Tabellenkopf suchen (Zeile, die mit "System" beginnt); ohne Treffer wird
-  // die erste Zeile als Kopf angenommen (altes Sheet-Format ohne Metadaten).
-  const headerRowIndex = allRows.findIndex((r) => (r[0] || "").trim() === "System");
+  // die erste Zeile als Kopf angenommen (altes Sheet-Format ohne Kopfbereich).
+  const headerRowIndex = allRows.findIndex((row) => (row[0] || "").trim() === "System");
   const hasMetaBlock = headerRowIndex > 0;
-  const headers = (hasMetaBlock ? allRows[headerRowIndex] : allRows[0]).map((h) => h.trim());
+  const headers = allRows[hasMetaBlock ? headerRowIndex : 0].map((header) => header.trim());
   const metaRows = hasMetaBlock ? allRows.slice(0, headerRowIndex) : [];
   const bodyRows = allRows.slice((hasMetaBlock ? headerRowIndex : 0) + 1);
 
   applySheetMeta(parseMetaBlock(metaRows));
   applyCategoryTable(metaRows);
 
-  const rows = bodyRows
-    .filter((r) => r.some((c) => c.trim() !== ""))
-    .map((r) => {
-      const obj = {};
-      headers.forEach((h, i) => {
-        obj[h] = (r[i] || "").trim();
-      });
-      return obj;
-    })
-    .filter((r) => (r["System"] || "").trim() !== "");
-
   const range = computeSlotRanges();
-  return rows.map((r, i) => rowToOffer(r, i, range));
+  return bodyRows
+    .filter((row) => row.some((cell) => cell.trim() !== ""))
+    .map((row) => rowToObject(headers, row))
+    .filter((row) => row["System"] !== "")
+    .map((row, index) => rowToOffer(row, index, range));
 }
 
-// Lädt die Angebote (Sheet + EXTRA_OFFERS), fällt bei Fehlern auf FALLBACK_OFFERS zurück.
-// Angebote ohne Titel (z.B. ein leeres "Pausenangebot:" im Sheet) werden ausgeblendet.
+// Lädt alle Angebote (Sheet + EXTRA_OFFERS) und fällt bei Fehlern auf FALLBACK_OFFERS
+// zurück. Angebote ohne Titel (z.B. ein leeres Pausenangebot) werden ausgeblendet.
 async function loadOffers() {
-  const extra = typeof EXTRA_OFFERS !== "undefined" ? EXTRA_OFFERS : [];
-  let combined;
+  const extraOffers = typeof EXTRA_OFFERS !== "undefined" ? EXTRA_OFFERS : [];
+  let offers;
   try {
     const sheetOffers = await loadOffersFromSheet();
     if (sheetOffers.length > 0) {
-      combined = sheetOffers.concat(extra);
+      offers = sheetOffers.concat(extraOffers);
     } else {
       console.warn("Sheet enthielt keine Angebote, nutze FALLBACK_OFFERS.");
     }
   } catch (err) {
     console.warn("Konnte Angebote nicht aus dem Google Sheet laden, nutze FALLBACK_OFFERS.", err);
   }
-  if (!combined) {
-    const fallback = typeof FALLBACK_OFFERS !== "undefined" ? FALLBACK_OFFERS : [];
-    combined = fallback.concat(extra);
+  if (!offers) {
+    const fallbackOffers = typeof FALLBACK_OFFERS !== "undefined" ? FALLBACK_OFFERS : [];
+    offers = fallbackOffers.concat(extraOffers);
   }
-  return combined.filter((o) => (o.title || "").trim() !== "");
+  return offers.filter((offer) => (offer.title || "").trim() !== "");
 }
