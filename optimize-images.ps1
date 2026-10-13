@@ -1,19 +1,40 @@
-# Verkleinert/komprimiert alle JPG/PNG/WebP unter Images/ auf eine sinnvolle Breite.
+﻿# Erzeugt Images/ komplett neu aus den unkomprimierten Originalen in Images-Originale/:
+# Images/ wird zuerst geleert, danach wird jedes Bild (gleicher Unterordner/Dateiname)
+# auf maximal $MaxWidth Pixel Breite verkleinert und komprimiert abgelegt. Bilder, die
+# schon klein genug sind oder durch die Komprimierung nicht kleiner würden, werden
+# unverändert kopiert. So bleibt nie etwas Altes liegen und nichts wird doppelt
+# komprimiert.
+#
+# Neue Bilder also immer in Images-Originale/ ablegen (nicht in Images/), danach
+# dieses Skript bzw. optimize-images.bat ausführen.
+#
 # JPG/PNG laufen über Windows-Bordmittel (GDI+), WebP über ImageMagick
 # (winget install ImageMagick.ImageMagick) - ist es nicht installiert, werden
-# WebP-Dateien übersprungen. Einfach bei Bedarf manuell ausführen, z.B. nachdem
-# neue Bilder dazugekommen sind.
+# WebP-Dateien unverändert kopiert.
 
 param(
   [int]$MaxWidth = 1200,
   [int]$JpegQuality = 82,
-  [int]$WebpQuality = 80
+  [int]$WebpQuality = 80,
+  [int]$RecompressAboveKB = 100
 )
 
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$sourcePath = Join-Path $root "Images-Originale"
 $imagesPath = Join-Path $root "Images"
+
+# Sicherheitsnetz: nur löschen, wenn es wirklich Originale zum Neuerzeugen gibt
+if (-not (Test-Path $sourcePath)) {
+  Write-Host "Abbruch: Ordner 'Images-Originale' nicht gefunden - nichts wurde gelöscht." -ForegroundColor Red
+  exit 1
+}
+$sourceFiles = @(Get-ChildItem -Path $sourcePath -Recurse -File)
+if ($sourceFiles.Count -eq 0) {
+  Write-Host "Abbruch: 'Images-Originale' ist leer - nichts wurde gelöscht." -ForegroundColor Red
+  exit 1
+}
 
 $magick = (Get-Command magick -ErrorAction SilentlyContinue).Source
 if (-not $magick) {
@@ -24,88 +45,82 @@ $jpegCodec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where
 $encoderParams = New-Object System.Drawing.Imaging.EncoderParameters(1)
 $encoderParams.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, $JpegQuality)
 
-$files = Get-ChildItem -Path $imagesPath -Recurse -File -Include *.jpg, *.jpeg, *.png, *.webp
+# Images/ leeren
+if (Test-Path $imagesPath) {
+  Get-ChildItem -Path $imagesPath -Force | Remove-Item -Recurse -Force
+} else {
+  New-Item -ItemType Directory -Path $imagesPath | Out-Null
+}
+
 $totalBefore = 0
 $totalAfter = 0
 
-foreach ($file in $files) {
-  if ($file.Extension.ToLower() -eq ".webp") {
-    $sizeBefore = $file.Length
-    if (-not $magick) {
-      Write-Host ("{0,-40} WebP - übersprungen (ImageMagick nicht installiert)" -f $file.Name)
-      $totalBefore += $sizeBefore
-      $totalAfter += $sizeBefore
-      continue
-    }
-    $webpWidth = [int](& $magick identify -format "%w" $file.FullName)
-    if ($webpWidth -le $MaxWidth) {
-      Write-Host ("{0,-40} WebP {1}px  ({2} KB) - schon klein genug" -f $file.Name, $webpWidth, [math]::Round($sizeBefore / 1KB, 1))
-      $totalBefore += $sizeBefore
-      $totalAfter += $sizeBefore
-      continue
-    }
-    # Größe nur verkleinern (">"), nie vergrößern; Ergebnis nur übernehmen, wenn es kleiner ist
-    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("opt_" + $file.Name)
-    & $magick $file.FullName -resize "${MaxWidth}x>" -quality $WebpQuality $tmp
-    $sizeAfter = $sizeBefore
-    if ((Test-Path $tmp) -and (Get-Item $tmp).Length -lt $sizeBefore) {
-      Move-Item $tmp $file.FullName -Force
-      $sizeAfter = (Get-Item $file.FullName).Length
-    } elseif (Test-Path $tmp) {
-      Remove-Item $tmp
-    }
-    $totalBefore += $sizeBefore
-    $totalAfter += $sizeAfter
-    Write-Host ("{0,-40} WebP  ({1} KB -> {2} KB)" -f $file.Name, [math]::Round($sizeBefore / 1KB, 1), [math]::Round($sizeAfter / 1KB, 1))
-    continue
-  }
+foreach ($file in $sourceFiles) {
+  $relative = $file.FullName.Substring($sourcePath.Length).TrimStart('\')
+  $dest = Join-Path $imagesPath $relative
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
 
-  $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
-  $sizeBefore = $bytes.Length
-  $ms = New-Object System.IO.MemoryStream(, $bytes)
-  $img = [System.Drawing.Image]::FromStream($ms)
-  $origWidth = $img.Width
-  $origHeight = $img.Height
+  $ext = $file.Extension.ToLower()
+  $sizeBefore = $file.Length
+  $note = "unverändert kopiert"
 
-  if ($origWidth -le $MaxWidth) {
-    Write-Host ("{0,-40} {1}x{2}  ({3} KB) - schon klein genug" -f $file.Name, $origWidth, $origHeight, [math]::Round($sizeBefore / 1KB, 1))
+  if ($ext -in ".jpg", ".jpeg", ".png") {
+    $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+    $ms = New-Object System.IO.MemoryStream(, $bytes)
+    $img = [System.Drawing.Image]::FromStream($ms)
+    $origWidth = $img.Width
+    $origHeight = $img.Height
+
+    # PNG nur bei zu großer Breite anfassen (verlustfrei, Neu-Speichern spart sonst nichts)
+    $needsWork = ($origWidth -gt $MaxWidth) -or ($ext -ne ".png" -and $sizeBefore -gt $RecompressAboveKB * 1KB)
+    if ($needsWork) {
+      $newWidth = [math]::Min($origWidth, $MaxWidth)
+      $newHeight = [int]([math]::Round($origHeight * ($newWidth / $origWidth)))
+      $bitmap = New-Object System.Drawing.Bitmap($newWidth, $newHeight)
+      $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+      $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+      $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+      $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+      $graphics.DrawImage($img, 0, 0, $newWidth, $newHeight)
+      if ($ext -eq ".png") {
+        $bitmap.Save($dest, [System.Drawing.Imaging.ImageFormat]::Png)
+      } else {
+        $bitmap.Save($dest, $jpegCodec, $encoderParams)
+      }
+      $graphics.Dispose()
+      $bitmap.Dispose()
+      $note = "${origWidth}x${origHeight} -> ${newWidth}x${newHeight}"
+    }
+    else {
+      $note = "schon klein genug, kopiert"
+    }
     $img.Dispose()
     $ms.Dispose()
-    $totalBefore += $sizeBefore
-    $totalAfter += $sizeBefore
-    continue
+  }
+  elseif ($ext -eq ".webp" -and $magick) {
+    $webpWidth = [int](& $magick identify -format "%w" $file.FullName)
+    if ($webpWidth -gt $MaxWidth -or $sizeBefore -gt $RecompressAboveKB * 1KB) {
+      & $magick $file.FullName -resize "${MaxWidth}x>" -quality $WebpQuality $dest
+      $note = "WebP ${webpWidth}px, neu komprimiert"
+    }
+    else {
+      $note = "WebP schon klein genug, kopiert"
+    }
+  }
+  elseif ($ext -eq ".webp") {
+    $note = "WebP unverändert kopiert (ImageMagick nicht installiert)"
   }
 
-  $ratio = $MaxWidth / $origWidth
-  $newWidth = $MaxWidth
-  $newHeight = [int]([math]::Round($origHeight * $ratio))
-
-  $bitmap = New-Object System.Drawing.Bitmap($newWidth, $newHeight)
-  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-  $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-  $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-  $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-  $graphics.DrawImage($img, 0, 0, $newWidth, $newHeight)
-
-  $img.Dispose()
-  $ms.Dispose()
-
-  if ($file.Extension.ToLower() -eq ".png") {
-    $bitmap.Save($file.FullName, [System.Drawing.Imaging.ImageFormat]::Png)
-  } else {
-    $bitmap.Save($file.FullName, $jpegCodec, $encoderParams)
+  # Nichts erzeugt (oder Ergebnis nicht kleiner als das Original): Original kopieren
+  if (-not (Test-Path $dest) -or (Get-Item $dest).Length -ge $sizeBefore) {
+    Copy-Item $file.FullName $dest -Force
+    if ($note -notlike "*kopiert*") { $note += " (nicht kleiner, Original behalten)" }
   }
-  $graphics.Dispose()
-  $bitmap.Dispose()
 
-  $sizeAfter = (Get-Item $file.FullName).Length
-  if ($sizeAfter -ge $sizeBefore) {
-    [System.IO.File]::WriteAllBytes($file.FullName, $bytes)
-    $sizeAfter = $sizeBefore
-  }
+  $sizeAfter = (Get-Item $dest).Length
   $totalBefore += $sizeBefore
   $totalAfter += $sizeAfter
-  Write-Host ("{0,-40} {1}x{2} -> {3}x{4}  ({5} KB -> {6} KB)" -f $file.Name, $origWidth, $origHeight, $newWidth, $newHeight, [math]::Round($sizeBefore / 1KB, 1), [math]::Round($sizeAfter / 1KB, 1))
+  Write-Host ("{0,-40} {1,-32} ({2} KB -> {3} KB)" -f $relative, $note, [math]::Round($sizeBefore / 1KB, 1), [math]::Round($sizeAfter / 1KB, 1))
 }
 
 Write-Host ""
