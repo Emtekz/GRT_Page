@@ -40,5 +40,6 @@
 }
 
 .experiment-empty {
+  margin: 0 0 1.2rem;
   color: var(--text-dim);
 }

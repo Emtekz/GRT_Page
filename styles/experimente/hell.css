@@ -1,0 +1,61 @@
+/* Stil "Hell": heller, ruhiger Look mit weißen Karten und weichen Schatten */
+:root {
+  --bg: #f5f1e8;
+  --bg-alt: #ffffff;
+  --card-bg: #ffffff;
+  --card-hover: #fbf8f1;
+  --accent: #c2410c;
+  --accent-2: #4f46e5;
+  --text: #1f2430;
+  --text-dim: #5d6575;
+  --border: #ddd5c4;
+  --shadow: rgba(60, 45, 20, 0.2);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+}
+
+header.event-header {
+  background: linear-gradient(180deg, #ffffff 0%, transparent 100%);
+}
+
+header.event-header h1 {
+  text-shadow: none;
+}
+
+.slot-nav {
+  background: rgba(245, 241, 232, 0.94);
+}
+
+.fill-segment {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.offer-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.modal {
+  border-radius: 18px;
+}
+
+.modal-image-overlay .modal-system,
+.modal-image-overlay .modal-title {
+  text-shadow: none;
+}
+
+.content-warning-text {
+  color: #b91c1c;
+}
+
+.content-warning-flag {
+  color: #b91c1c;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  color: var(--accent);
+}

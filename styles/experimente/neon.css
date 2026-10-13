@@ -1,0 +1,81 @@
+/* Stil "Neon": fast schwarz, Cyan + Magenta, Monospace, scharfe Kanten, Leuchtrahmen */
+:root {
+  --bg: #07060f;
+  --bg-alt: #0d0b1c;
+  --card-bg: #120f26;
+  --card-hover: #1a1538;
+  --accent: #00e5ff;
+  --accent-2: #ff2bd6;
+  --text: #eaf7ff;
+  --text-dim: #8fa3c4;
+  --border: #2a2a5a;
+  --shadow: rgba(0, 229, 255, 0.18);
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+body {
+  background: radial-gradient(circle at top, #170f3a 0%, var(--bg) 60%);
+}
+
+header.event-header {
+  background: linear-gradient(180deg, #1a0f3d 0%, transparent 100%);
+  border-bottom: 1px solid var(--accent-2);
+}
+
+header.event-header h1 {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 12px var(--accent), 0 0 28px rgba(0, 229, 255, 0.5);
+}
+
+.slot-nav {
+  background: rgba(7, 6, 15, 0.92);
+  border-bottom: 1px solid var(--accent-2);
+  box-shadow: 0 0 18px rgba(255, 43, 214, 0.25);
+}
+
+.slot-heading {
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 6px 12px -8px var(--accent);
+}
+
+.slot-heading h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.offer-card {
+  border: 1px solid var(--accent-2);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(255, 43, 214, 0.25);
+}
+
+.offer-card:hover,
+.offer-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.55);
+  transform: translateY(-3px);
+}
+
+.offer-card .offer-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 20, 0.94) 15%,
+    rgba(5, 4, 20, 0.55) 50%,
+    rgba(5, 4, 20, 0.05) 85%
+  );
+}
+
+.slot-nav-view-toggle {
+  border-radius: 2px;
+}
+
+.modal {
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.35);
+}
+
+.modal-stats .stat {
+  border-radius: 2px;
+}
