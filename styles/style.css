@@ -260,6 +260,19 @@ header.event-header .event-datetime strong {
   font-weight: 700;
 }
 
+/* Der Ort ist ein Link zu Google Maps: gleiche Farbe wie der Text, nur dezent
+   unterstrichen, beim Darüberfahren durchgezogen. */
+header.event-header .event-datetime a {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+
+header.event-header .event-datetime a:hover,
+header.event-header .event-datetime a:focus-visible {
+  text-decoration-style: solid;
+}
+
 @media (max-width: 700px) {
   header.event-header {
     padding: 1.5rem 1rem 1.2rem;

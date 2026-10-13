@@ -156,10 +156,17 @@ function languageFlagMarkup(offer, className) {
 // ------------------------------------------------------------
 
 // Trägt Titel, Datum und Ort aus EVENT_INFO (kommt aus dem Sheet) in den Kopf ein.
+// Der Ort wird zum Link auf Google Maps (Wegbeschreibung), falls mapsUrl gesetzt ist.
 function renderEventHeader() {
   document.getElementById("event-title").textContent = EVENT_INFO.title;
   document.getElementById("event-date").textContent = EVENT_INFO.date;
-  document.getElementById("event-location").textContent = EVENT_INFO.location;
+
+  const locationEl = document.getElementById("event-location");
+  if (EVENT_INFO.mapsUrl) {
+    locationEl.innerHTML = `<a href="${EVENT_INFO.mapsUrl}" target="_blank" rel="noopener" title="Wegbeschreibung in Google Maps öffnen">${escapeHtml(EVENT_INFO.location)}</a>`;
+  } else {
+    locationEl.textContent = EVENT_INFO.location;
+  }
 }
 
 // ------------------------------------------------------------

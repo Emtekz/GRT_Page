@@ -4,14 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rollenspieltag - Zeitplan</title>
-  <link rel="stylesheet" href="styles/style.css?v=82">
-  <link rel="stylesheet" href="styles/timeline.css?v=82">
+  <!-- Das "?v=NN" hinter den Dateinamen ist ein Cache-Buster: Nach Änderungen an
+       CSS/JS die Zahl in ALLEN HTML-Dateien erhöhen, sonst zeigen Browser (v.a.
+       auf dem Handy und bei GitHub Pages) weiter die alte Version. -->
+  <link rel="stylesheet" href="styles/style.css?v=84">
 </head>
 <body>
 
-  <!-- Verdeckt die ganze Seite, bis die Daten (Header-Infos + Angebote) geladen
-       sind - damit niemand die Seite noch leer/unbefüllt zu sehen bekommt.
-       Wird von script.js entfernt, sobald renderDashboard() fertig ist. -->
+  <!-- Kachelansicht. Aufbau: Ladescreen, Seitenkopf, Navbar, Inhalt (von script.js
+       befüllt), Footer, Info-Pop-up. -->
+
+  <!-- Ladescreen: verdeckt die Seite, bis die Daten geladen sind (blendet initPage() in
+       shared.js aus). -->
   <div id="loading-overlay" class="loading-overlay">
     <div class="loading-spinner" aria-hidden="true"></div>
     <p>Dashboard wird geladen …</p>
@@ -25,6 +29,8 @@
     <p class="event-datetime">Am <strong id="event-date"></strong> im <strong id="event-location"></strong></p>
   </header>
 
+  <!-- Navbar: links der aktuell sichtbare Abschnitt (per Scroll), rechts der Button zur
+       Zeitstrahl-Ansicht -->
   <nav class="slot-nav" id="slot-nav">
     <div class="slot-nav-current-frame">
       <div class="slot-nav-current" id="slot-nav-current"></div>
@@ -48,7 +54,9 @@
     <a href="pages/experimente/index.html">Experimente &amp; Testbereich &rarr;</a>
   </footer>
 
-  <!-- Pop-up mit Abenteuer-Details -->
+  <!-- Info-Pop-up (wird von openModal() in shared.js befüllt). Dieselbe Markup-Struktur
+       steht auch in pages/timeline.html und den Experiment-Seiten - Änderungen am
+       Aufbau dort mitmachen. -->
   <div class="modal-overlay hidden" id="modal-overlay">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-system">
       <button class="modal-close" id="modal-close" aria-label="Schließen">&times;</button>
@@ -78,11 +86,15 @@
     </div>
   </div>
 
-  <script src="source/data.js?v=82"></script>
+  <!-- Reihenfolge ist wichtig, jede Datei baut auf den vorigen auf:
+       data.js (Grunddaten) -> csv-link.js (Sheet-Link) -> sheet-loader.js (lädt das
+       Sheet) -> image-resolver.js (Bilder) -> shared.js (Pop-up, Hilfsfunktionen)
+       -> script.js (diese Seite). -->
+  <script src="source/data.js?v=84"></script>
   <script src="csv-link.js"></script>
-  <script src="source/sheet-loader.js?v=82"></script>
-  <script src="source/image-resolver.js?v=82"></script>
-  <script src="source/shared.js?v=82"></script>
-  <script src="source/script.js?v=82"></script>
+  <script src="source/sheet-loader.js?v=84"></script>
+  <script src="source/image-resolver.js?v=84"></script>
+  <script src="source/shared.js?v=84"></script>
+  <script src="source/script.js?v=84"></script>
 </body>
 </html>

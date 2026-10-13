@@ -4,14 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rollenspieltag - Zeitstrahl (Test)</title>
-  <link rel="stylesheet" href="../styles/style.css?v=82">
-  <link rel="stylesheet" href="../styles/timeline.css?v=82">
+  <!-- "?v=NN" = Cache-Buster, siehe index.html. -->
+  <link rel="stylesheet" href="../styles/style.css?v=84">
+  <link rel="stylesheet" href="../styles/timeline.css?v=84">
 </head>
 <body>
 
-  <!-- Verdeckt die ganze Seite, bis die Daten (Header-Infos + Angebote) geladen
-       sind - damit niemand die Seite noch leer/unbefüllt zu sehen bekommt.
-       Wird von timeline.js entfernt, sobald renderTimeline() fertig ist. -->
+  <!-- Zeitstrahl-Ansicht. Aufbau wie index.html, nur die Navbar enthält zusätzlich die
+       Stunden-Skala (befüllt von timeline.js) und der Inhalt ist der Zeitstrahl. -->
+
+  <!-- Ladescreen: verdeckt die Seite, bis die Daten geladen sind (blendet initPage() in
+       shared.js aus). -->
   <div id="loading-overlay" class="loading-overlay">
     <div class="loading-spinner" aria-hidden="true"></div>
     <p>Zeitplan wird geladen …</p>
@@ -25,6 +28,8 @@
     <p class="event-datetime">Am <strong id="event-date"></strong> im <strong id="event-location"></strong></p>
   </header>
 
+  <!-- Navbar: Stunden-Skala (Desktop: ganzer Tag; Mobile: Überschrift, Wisch-Hinweis und
+       Skala des aktuellen Slots) und Button zurück zur Kachelansicht -->
   <nav class="slot-nav" id="slot-nav">
     <div class="nav-time-ruler" id="nav-time-ruler">
       <div class="nav-time-ruler-frame">
@@ -52,7 +57,8 @@
     <a href="experimente/index.html">Experimente &amp; Testbereich &rarr;</a>
   </footer>
 
-  <!-- Pop-up mit Abenteuer-Details -->
+  <!-- Info-Pop-up (wird von openModal() in shared.js befüllt), gleiche Struktur wie in
+       index.html -->
   <div class="modal-overlay hidden" id="modal-overlay">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-system">
       <button class="modal-close" id="modal-close" aria-label="Schließen">&times;</button>
@@ -85,11 +91,11 @@
   <!-- Diese Seite liegt in pages/, daher zeigen alle Bild-Pfade in image-resolver.js
        eine Ebene zu hoch - ASSET_BASE gleicht das aus. -->
   <script>const ASSET_BASE = "../";</script>
-  <script src="../source/data.js?v=82"></script>
+  <script src="../source/data.js?v=84"></script>
   <script src="../csv-link.js"></script>
-  <script src="../source/sheet-loader.js?v=82"></script>
-  <script src="../source/image-resolver.js?v=82"></script>
-  <script src="../source/shared.js?v=82"></script>
-  <script src="../source/timeline.js?v=82"></script>
+  <script src="../source/sheet-loader.js?v=84"></script>
+  <script src="../source/image-resolver.js?v=84"></script>
+  <script src="../source/shared.js?v=84"></script>
+  <script src="../source/timeline.js?v=84"></script>
 </body>
 </html>

@@ -6,7 +6,8 @@
   Google Sheet überschrieben (siehe sheet-loader.js); die Werte hier gelten nur,
   solange das Sheet nichts anderes liefert oder nicht erreichbar ist.
 
-  1) EVENT_INFO      Titel, Datum und Ort (Sheet-Kopfbereich überschreibt sie)
+  1) EVENT_INFO      Titel, Datum, Ort und Maps-Link zum Ort (Titel/Datum/Ort
+                     überschreibt der Sheet-Kopfbereich, der Link steht nur hier)
   2) SLOTS           die festen Zeitslots des Tages
   3) EXTRA_OFFERS    Angebote, die nicht aus der Haupttabelle kommen (die Pause);
                      Titel, Plätze, Leitung und Sprache stammen aus der
@@ -39,7 +40,9 @@
 const EVENT_INFO = {
   title: "Rollenspieltag 2026",
   date: "Samstag, 14. November 2026",
-  location: "Vereinsheim, Hauptstraße 1"
+  location: "Vereinsheim, Hauptstraße 1",
+  // Der Ort im Seitenkopf verlinkt hierhin (Wegbeschreibung). Leer lassen = kein Link.
+  mapsUrl: "https://maps.app.goo.gl/dViqe8wzPt1ftDReA"
 };
 
 // Feste Zeitslots des Tages (Reihenfolge = Reihenfolge auf der Seite).

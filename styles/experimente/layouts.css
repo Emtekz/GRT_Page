@@ -41,6 +41,18 @@
   color: var(--text-dim);
 }
 
+/* Ort als Link zu Google Maps (siehe renderEventHeader() in shared.js) */
+.lx-brand p a {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.lx-brand p a:hover,
+.lx-brand p a:focus-visible {
+  text-decoration-style: solid;
+}
+
 .lx-switch {
   display: flex;
   gap: 0.4rem;
