@@ -5,9 +5,8 @@
   Wird auf jeder Seite NACH data.js / sheet-loader.js / image-resolver.js und
   VOR dem seiteneigenen Skript eingebunden:
 
-    script.js              -> Kachelansicht (index.html)
-    timeline.js            -> Zeitstrahl (pages/timeline.html)
-    experimente-layouts.js -> Aufbau-Experimente (pages/experimente/aufbau.html)
+    script.js    -> Kachelansicht (index.html)
+    timeline.js  -> Zeitstrahl (pages/timeline.html)
 
   Hier liegt alles, was mehr als eine Seite braucht: Hilfsfunktionen für Zeiten
   und Auslastung, das Info-Pop-up und der gemeinsame Seitenstart (initPage).

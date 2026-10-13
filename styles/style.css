@@ -6,15 +6,14 @@
     1. Farben, Schrift, Grundeinstellungen
     2. Navbar (oben, bleibt beim Scrollen stehen)
     3. Ladescreen
-    4. Seitenkopf und Footer
+    4. Seitenkopf
     5. Zeitslots und Angebotskarten
     6. Auslastungsbalken
     7. Info-Pop-up
     8. Hilfsklasse .hidden (muss zuletzt stehen)
 
-  Die Zeitstrahl-Ansicht ergänzt das in timeline.css, die Experimente in
-  experimente.css und styles/experimente/. Farben nur über die Variablen unten
-  ändern - fast alles andere greift darauf zurück.
+  Die Zeitstrahl-Ansicht ergänzt das in timeline.css. Farben nur über die
+  Variablen unten ändern - fast alles andere greift darauf zurück.
 */
 
 /* ---------- 1. Farben, Schrift, Grundeinstellungen ---------- */
@@ -209,7 +208,7 @@ body.modal-open {
   }
 }
 
-/* ---------- 4. Seitenkopf und Footer ---------- */
+/* ---------- 4. Seitenkopf ---------- */
 
 header.event-header {
   text-align: center;
@@ -284,31 +283,11 @@ header.event-header .event-datetime a:focus-visible {
   }
 }
 
+/* Inhaltsbereich (Kacheln bzw. Zeitstrahl), mittig mit maximaler Breite */
 main {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
-}
-
-.site-footer {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem 2rem;
-  border-top: 1px solid var(--border);
-  text-align: center;
-  font-size: 0.85rem;
-}
-
-.site-footer a {
-  color: var(--text-dim);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.site-footer a:hover,
-.site-footer a:focus-visible {
-  color: var(--accent);
-  outline: none;
 }
 
 /* ---------- 5. Zeitslots und Angebotskarten ---------- */

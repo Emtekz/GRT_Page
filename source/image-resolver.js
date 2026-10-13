@@ -2,7 +2,7 @@
   ============================================================
   image-resolver.js - Titelbilder für die Angebote finden
   ============================================================
-  Wird von allen Seiten genutzt (Kacheln, Zeitstrahl, Pop-up, Experimente).
+  Wird von allen Seiten genutzt (Kacheln, Zeitstrahl, Pop-up).
 
   Suchreihenfolge für ein Angebot (der erste Treffer gewinnt):
     1. offer.image                    - falls im Angebot fest eingetragen
