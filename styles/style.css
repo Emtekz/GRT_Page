@@ -269,6 +269,27 @@ main {
   padding: 2rem 1.5rem 4rem;
 }
 
+.site-footer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.site-footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
 .slot-section {
   margin-bottom: 3rem;
   scroll-margin-top: 4.5rem;

@@ -1,0 +1,44 @@
+/* Nur für die Übersichtsseite des Testbereichs (pages/experimente/index.html) */
+
+.experiment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.experiment-list a {
+  display: block;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.experiment-list a:hover,
+.experiment-list a:focus-visible {
+  background: var(--card-hover);
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.experiment-list strong {
+  display: block;
+  color: var(--accent);
+  font-size: 1.05rem;
+}
+
+.experiment-list span {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.experiment-empty {
+  color: var(--text-dim);
+}
