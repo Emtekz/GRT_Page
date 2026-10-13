@@ -1,0 +1,411 @@
+/* Experimentelle Seitenaufbauten (pages/experimente/aufbau.html) - alle Klassen
+   mit lx- Präfix, Farben/Schrift kommen aus den Variablen in style.css. */
+
+/* ---------- Gemeinsam: Kopfleiste ---------- */
+.lx-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+  padding: 0.7rem 1.2rem;
+  background: rgba(22, 20, 31, 0.93);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.lx-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.lx-brand img {
+  height: 44px;
+  width: auto;
+}
+
+.lx-brand h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.lx-brand p {
+  margin: 0.1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.lx-switch {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.lx-switch a {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lx-switch a:hover,
+.lx-switch a:focus-visible {
+  color: var(--text);
+  border-color: var(--accent-2);
+  outline: none;
+}
+
+.lx-switch a.active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.lx-root {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 1.5rem 1.2rem 3rem;
+}
+
+/* ---------- Gemeinsame Bausteine ---------- */
+.lx-img,
+.lx-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lx-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.lx-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10, 8, 16, 0.92) 8%, rgba(10, 8, 16, 0.4) 50%, rgba(10, 8, 16, 0) 80%);
+}
+
+.lx-system-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lx-system {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-flag {
+  height: 13px;
+  width: auto;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lx-time-pill {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 2;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(10, 8, 16, 0.72);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.lx-root h3 {
+  margin: 0.2rem 0 0.4rem;
+  color: #fff;
+  line-height: 1.25;
+}
+
+.lx-root .fill-bar {
+  margin-top: 0.4rem;
+}
+
+/* ---------- 1) Poster-Wand ---------- */
+.lx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.lx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lx-chip span {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.lx-chip:hover,
+.lx-chip:focus-visible {
+  color: var(--text);
+  border-color: var(--accent-2);
+  outline: none;
+}
+
+.lx-chip.active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.lx-poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.lx-poster-card {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lx-poster-card[hidden] {
+  display: none;
+}
+
+.lx-poster-card:hover,
+.lx-poster-card:focus-visible {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 14px 30px var(--shadow);
+  outline: none;
+}
+
+.lx-poster-body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0.8rem 0.85rem 0.95rem;
+}
+
+.lx-poster-body h3 {
+  font-size: 1.05rem;
+}
+
+/* ---------- 2) Programmheft ---------- */
+.lx-program .lx-prog-slot,
+.lx-programm .lx-prog-slot {
+  margin-bottom: 2rem;
+}
+
+.lx-prog-slot h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--accent);
+  font-size: 1.3rem;
+  color: var(--text);
+}
+
+.lx-prog-slot h2 small {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lx-prog-slot ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lx-prog-row {
+  display: grid;
+  grid-template-columns: 4.2rem 64px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lx-prog-row:hover,
+.lx-prog-row:focus-visible {
+  background: var(--card-bg);
+  outline: none;
+}
+
+.lx-prog-time {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.lx-prog-time strong {
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.lx-prog-time span {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.lx-prog-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.lx-prog-main {
+  min-width: 0;
+}
+
+.lx-prog-main h3 {
+  margin: 0.1rem 0 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.lx-prog-side {
+  min-width: 5.5rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+@media (max-width: 600px) {
+  .lx-prog-row {
+    grid-template-columns: 3.2rem 52px 1fr;
+    gap: 0.7rem;
+  }
+
+  .lx-prog-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .lx-prog-side {
+    grid-column: 2 / -1;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .lx-prog-side .fill-bar {
+    flex: 1;
+    margin-top: 0;
+  }
+}
+
+/* ---------- 3) Reihen ---------- */
+.lx-rail {
+  margin-bottom: 2rem;
+}
+
+.lx-rail h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin: 0 0 0.7rem;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.lx-rail h2 small {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lx-rail-track {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding: 0.4rem 0.2rem 1rem;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.lx-rail-card {
+  position: relative;
+  flex: 0 0 min(300px, 78vw);
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card-bg);
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lx-rail-card:hover,
+.lx-rail-card:focus-visible {
+  transform: scale(1.05);
+  box-shadow: 0 12px 28px var(--shadow);
+  z-index: 3;
+  outline: none;
+}
+
+.lx-rail-body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0.7rem 0.85rem 0.8rem;
+}
+
+.lx-rail-body h3 {
+  font-size: 1rem;
+}

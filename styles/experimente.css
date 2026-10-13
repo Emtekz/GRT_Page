@@ -43,3 +43,9 @@
   margin: 0 0 1.2rem;
   color: var(--text-dim);
 }
+
+.experiment-heading {
+  margin: 2.5rem 0 0.6rem;
+  font-size: 1.3rem;
+  color: var(--text);
+}

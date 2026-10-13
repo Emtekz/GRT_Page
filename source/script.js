@@ -329,7 +329,8 @@ function unlockPageScroll() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   OFFERS = await loadOffers();
-  renderDashboard();
+  // Experiment-Seiten (pages/experimente/aufbau.html) liefern einen eigenen Aufbau mit
+  window.renderExperimentLayout ? window.renderExperimentLayout() : renderDashboard();
   document.getElementById("loading-overlay")?.classList.add("hidden");
 
   document.getElementById("modal-close").addEventListener("click", closeModal);
