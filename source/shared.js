@@ -287,7 +287,7 @@ function makeOpenable(element, offer, times) {
 // Gemeinsamer Ablauf jeder Seite: Angebote laden, Seite aufbauen (renderPage),
 // Ladescreen ausblenden und das Pop-up scharf schalten.
 async function initPage(renderPage) {
-  OFFERS = await loadOffers();
+  [OFFERS] = await Promise.all([loadOffers(), loadDefaultImageIndex()]);
   renderPage();
   document.getElementById("loading-overlay")?.classList.add("hidden");
   bindModalEvents();

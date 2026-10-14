@@ -11,8 +11,12 @@
     4. Images/Default/<System ohne Edition>.<ext>
                                       - z.B. "Dungeons & Dragons 5e" findet auch
                                         dungeons_and_dragons.webp
-    5. Platzhalter: Farbverlauf (aus dem Systemnamen) mit dem Logo
-  Als Endung wird webp, jpg, jpeg und png probiert.
+    5. Ein vorhandenes Default-Bild, dessen Name als ganzes Stück im Systemnamen
+       vorkommt - z.B. "Call of Cthulhu (7e)" oder "Cthulhu 7e" finden cthulhu.jpg.
+       Grundlage ist Images/Default/index.json (schreibt optimize-images.ps1),
+       bei mehreren Treffern gewinnt der längste Name.
+    6. Platzhalter: Farbverlauf (aus dem Systemnamen) mit dem Logo
+  Als Endung wird bei 2-4 webp, jpg, jpeg und png probiert.
 
   Dateinamen: komplett klein, Leerzeichen -> "_", Sonderzeichen entfallen, "&" -> "and"
     "Daggerheart"         -> Images/Default/daggerheart.webp
@@ -66,6 +70,64 @@ function pathsWithExtensions(folder, slug) {
   return IMAGE_EXTENSIONS.map((ext) => `${folder}/${encodeURIComponent(slug)}.${ext}`);
 }
 
+// Dateinamen der Bilder in Images/Default/ (aus index.json), siehe loadDefaultImageIndex()
+let defaultImageFiles = [];
+
+// Lädt die Liste der Default-Bilder, die optimize-images.ps1 geschrieben hat. Fehlt
+// sie (z.B. Seite ohne Skript-Lauf), bleibt die Liste leer und die Bildsuche
+// arbeitet nur mit den exakten Namen.
+async function loadDefaultImageIndex() {
+  try {
+    const response = await fetch(`${DEFAULT_IMAGE_FOLDER}/index.json`);
+    if (response.ok) defaultImageFiles = await response.json();
+  } catch (err) {
+    console.warn("Default-Bilderliste (index.json) nicht geladen.", err);
+  }
+}
+
+// Mögliche Kürzel eines Bildnamens (aus den Anfangsbuchstaben seiner Wörter), wie
+// man sie für ein System schreibt: dungeons_and_dragons -> "dnd", "dandd" (D&D),
+// "dd"; das_schwarze_auge -> "dsa". "and" zählt dabei als "n", als "and" oder gar
+// nicht. Einzelne Buchstaben sind zu unscharf und zählen nicht als Kürzel.
+function abbreviationsOf(imageWords) {
+  const initials = (andAs) => imageWords.map((word) => (word === "and" ? andAs : word[0])).join("");
+  return [initials("and"), initials("n"), initials("a"), initials("")].filter((abbr) => abbr.length >= 2);
+}
+
+// Sucht aus den vorhandenen Default-Bildern das passende zu einem Systemnamen
+// (systemSlug = Name mit "_" statt Leerzeichen, siehe slugifyForImage). Zwei Arten
+// von Treffern, die erste hat Vorrang:
+//   1. Der Bildname kommt als ganzes Stück im Systemnamen vor: "call_of_cthulhu_7e"
+//      enthält "cthulhu" -> cthulhu.jpg. "Als ganzes Stück" heißt: die Wörter stehen
+//      direkt hintereinander (so passt "cthulhu_now" nicht auf "call_of_cthulhu_7e").
+//      Bei mehreren Treffern gewinnt der längste Bildname.
+//   2. Ein Wort des Systemnamens ist das Kürzel eines Bildnamens: "dnd_5e" oder
+//      "d&d 2e" -> dungeons_and_dragons.webp, "dsa_5" -> das_schwarze_auge.webp.
+// Groß-/Kleinschreibung der Dateien ist egal, zurückgegeben wird der echte Dateiname.
+function findKnownSystemImage(systemSlug) {
+  const systemWords = systemSlug.split("_");
+  let wholeMatch = null;
+  let wholeMatchWordCount = 0;
+  let abbreviationMatch = null;
+
+  defaultImageFiles.forEach((file) => {
+    const imageWords = file.replace(/\.[^.]+$/, "").toLowerCase().split("_");
+
+    const appearsInSystem = systemWords.some((_, start) =>
+      imageWords.every((word, i) => systemWords[start + i] === word)
+    );
+    if (appearsInSystem && imageWords.length > wholeMatchWordCount) {
+      wholeMatch = file;
+      wholeMatchWordCount = imageWords.length;
+    }
+
+    if (!abbreviationMatch && abbreviationsOf(imageWords).some((abbr) => systemWords.includes(abbr))) {
+      abbreviationMatch = file;
+    }
+  });
+  return wholeMatch || abbreviationMatch;
+}
+
 // Alle Bildpfade, die für ein Angebot in Frage kommen, in Suchreihenfolge.
 function buildImageCandidates(offer, options) {
   const titleFolder = options && options.defaultOnly ? DEFAULT_IMAGE_FOLDER : IMAGE_FOLDER;
@@ -83,6 +145,9 @@ function buildImageCandidates(offer, options) {
     if (withoutEdition && withoutEdition !== systemSlug) {
       candidates.push(...pathsWithExtensions(DEFAULT_IMAGE_FOLDER, withoutEdition));
     }
+    // Zuletzt ein vorhandenes Default-Bild, dessen Name im Systemnamen vorkommt
+    const knownImage = findKnownSystemImage(systemSlug);
+    if (knownImage) candidates.push(`${DEFAULT_IMAGE_FOLDER}/${encodeURIComponent(knownImage)}`);
   }
   return candidates;
 }

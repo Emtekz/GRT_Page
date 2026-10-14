@@ -11,6 +11,11 @@
 # JPG/PNG laufen über Windows-Bordmittel (GDI+), WebP über ImageMagick
 # (winget install ImageMagick.ImageMagick) - ist es nicht installiert, werden
 # WebP-Dateien unverändert kopiert.
+#
+# Zum Schluss wird Images/Default/index.json geschrieben, eine Liste aller dort
+# liegenden Bilder. Die Seite nutzt sie, um zu einem System das passende Bild zu
+# finden, auch wenn der Name nicht exakt stimmt (z.B. "Call of Cthulhu (7e)" ->
+# cthulhu.jpg, siehe findKnownSystemImage() in image-resolver.js).
 
 param(
   [int]$MaxWidth = 1200,
@@ -121,6 +126,18 @@ foreach ($file in $sourceFiles) {
   $totalBefore += $sizeBefore
   $totalAfter += $sizeAfter
   Write-Host ("{0,-40} {1,-32} ({2} KB -> {3} KB)" -f $relative, $note, [math]::Round($sizeBefore / 1KB, 1), [math]::Round($sizeAfter / 1KB, 1))
+}
+
+# Liste der Default-Bilder für die Bildsuche der Seite (siehe Kopfkommentar)
+$defaultFolder = Join-Path $imagesPath "Default"
+if (Test-Path $defaultFolder) {
+  $defaultNames = @(Get-ChildItem -Path $defaultFolder -File |
+    Where-Object { $_.Extension.ToLower() -in ".jpg", ".jpeg", ".png", ".webp" } |
+    Sort-Object Name |
+    ForEach-Object { $_.Name })
+  $json = ConvertTo-Json -InputObject $defaultNames -Compress
+  [System.IO.File]::WriteAllText((Join-Path $defaultFolder "index.json"), $json, (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host ("index.json mit {0} Default-Bildern geschrieben." -f $defaultNames.Count)
 }
 
 Write-Host ""
